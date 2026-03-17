@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>检验排产管理系统 v10</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eaf3fc;--surface:#fff;--surface2:#f0f7fd;--surface3:#e2edf8;
+  --border:#c5d9ef;--border2:#a8c8e8;
+  --accent:#1a6fba;--accent2:#0e9fd4;--accent3:#e67e22;
+  --success:#17956b;--warn:#c97d0a;--danger:#c0392b;
+  --text:#1a2b3c;--text2:#3d5a7a;--text3:#7090b0;
+  --shadow:0 2px 10px rgba(26,111,186,.09);
+  --mono:'JetBrains Mono',monospace;--sans:'Noto Sans SC',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 70% 50% at 15% 20%,rgba(100,180,255,.10),transparent),
+             radial-gradient(ellipse 60% 60% at 85% 80%,rgba(26,111,186,.07),transparent);}
+.app{position:relative;z-index:1;}
+
+/* ── HEADER ── */
+header{
+  background:linear-gradient(135deg,#1a5a9e,#1a7fc4,#0e9fd4);
+  color:#fff;height:60px;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 3px 18px rgba(26,90,158,.35);
+  position:sticky;top:0;z-index:300;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:36px;height:36px;background:rgba(255,255,255,.18);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid rgba(255,255,255,.28);}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:.2px;}
+.logo-sub{font-size:10px;opacity:.65;font-family:var(--mono);}
+
+/* ── LIVE CLOCK ── */
+.live-clock{
+  display:flex;flex-direction:column;align-items:flex-end;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+  border-radius:8px;padding:4px 12px;cursor:default;
+}
+.clock-time{
+  font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:2px;
+  line-height:1.1;color:#fff;
+  text-shadow:0 0 20px rgba(180,230,255,.6);
+}
+.clock-date{font-size:10px;opacity:.75;letter-spacing:.5px;text-align:right;}
+
+/* ── SAVE BAR ── */
+.save-bar{
+  background:var(--surface);border-bottom:2px solid var(--border);
+  padding:6px 20px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;box-shadow:var(--shadow);
+  position:sticky;top:60px;z-index:250;
+}
+.save-status{display:flex;align-items:center;gap:8px;font-size:12px;}
+.save-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-saved{background:var(--success);}
+.dot-unsaved{background:var(--warn);animation:blink 1.2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}
+}
+.save-actions{display:flex;align-items:center;gap:8px;}
+
+/* ── NAV ── */
+.nav{background:var(--surface);border-bottom:2px solid var(--border);
+  display:flex;padding:0 18px;box-shadow:var(--shadow);
+  position:sticky;top:97px;z-index:200;overflow-x:auto;}
+.tab{padding:10px 15px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .18s;white-space:nowrap;}
+.tab:hover{color:var(--accent);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── CONTENT ── */
+.content{padding:15px 18px;}
+.panel{display:none;}.panel.active{display:block;}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:13px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;
+  padding:12px 14px;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.kpi.c1::after{background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.kpi.c2::after{background:linear-gradient(90deg,var(--accent2),#5bc4e8);}
+.kpi.c3::after{background:linear-gradient(90deg,var(--accent3),#f0a030);}
+.kpi.c4::after{background:linear-gradient(90deg,var(--success),#22c47d);}
+.kpi.c5::after{background:linear-gradient(90deg,var(--warn),#f0a030);}
+.kpi.c6::after{background:linear-gradient(90deg,var(--danger),#e74c3c);}
+.kpi-label{font-size:10px;color:var(--text3);margin-bottom:3px;}
+.kpi-val{font-size:20px;font-weight:700;font-family:var(--mono);line-height:1;}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* ── SECTION ── */
+.sec{background:var(--surface);border:1px solid var(--border);border-radius:11px;
+  margin-bottom:13px;overflow:hidden;box-shadow:var(--shadow);}
+.sec-head{background:var(--surface2);border-bottom:1px solid var(--border);
+  padding:9px 15px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.sec-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
+.sicon{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.si-b{background:rgba(26,111,186,.12);color:var(--accent);}
+.si-t{background:rgba(14,159,212,.12);color:var(--accent2);}
+.si-o{background:rgba(230,126,34,.12);color:var(--accent3);}
+.si-g{background:rgba(23,149,107,.12);color:var(--success);}
+.si-r{background:rgba(192,57,43,.12);color:var(--danger);}
+
+/* ── TABLE ── */
+.tw{overflow-x:auto;max-height:500px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--surface3);color:var(--text2);font-weight:600;padding:7px 8px;
+  border-bottom:2px solid var(--border2);white-space:nowrap;font-size:11px;text-align:center;
+  position:sticky;top:0;z-index:10;}
+th.L,td.L{text-align:left;}
+td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(26,111,186,.025);}
+.prod-hdr{background:var(--surface3);border-bottom:2px solid var(--border2);
+  padding:5px 8px;font-size:11px;font-weight:700;color:var(--text2);text-align:center;
+  border-right:2px solid var(--border2);border-left:1px solid var(--border);}
+.proc-sub{background:var(--surface3);border-bottom:1px solid var(--border2);
+  padding:4px 5px;font-size:10px;color:var(--text3);text-align:center;}
+
+/* ── PROGRESS CARD (per-worker completion) ── */
+.worker-progress-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;padding:13px 15px;}
+.wp-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;transition:box-shadow .2s;}
+.wp-card:hover{box-shadow:0 4px 16px rgba(26,111,186,.12);}
+.wp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.wp-avatar{display:flex;align-items:center;gap:8px;}
+.wp-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.wp-name{font-size:13px;font-weight:700;}
+.wp-id{font-size:10px;color:var(--text3);}
+.wp-pct-big{font-size:22px;font-weight:700;font-family:var(--mono);}
+.wp-meta{font-size:10px;color:var(--text3);margin-bottom:6px;}
+.wp-bar-wrap{background:var(--surface3);border-radius:5px;height:8px;overflow:hidden;margin-bottom:8px;}
+.wp-bar-fill{height:100%;border-radius:5px;transition:width .5s;}
+.wp-tasks{display:flex;flex-direction:column;gap:4px;}
+.wp-task-row{display:flex;align-items:center;gap:6px;font-size:11px;}
+.wp-task-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.wp-task-name{flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wp-task-val{font-family:var(--mono);font-size:10px;}
+.wp-task-bar{width:60px;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;flex-shrink:0;}
+.wp-task-fill{height:100%;border-radius:3px;}
+
+/* ── ACHIEVE BADGE ── */
+.achieve{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
+}
+.ach-yes{background:rgba(23,149,107,.12);color:var(--success);border:1px solid rgba(23,149,107,.3);}
+.ach-no {background:rgba(192,57,43,.12);color:var(--danger);border:1px solid rgba(192,57,43,.3);}
+.ach-risk{background:rgba(201,125,10,.12);color:var(--warn);border:1px solid rgba(201,125,10,.3);}
+
+/* ── DAILY LOG TABLE ── */
+.log-date-bar{display:flex;align-items:center;gap:10px;padding:10px 15px;flex-wrap:wrap;}
+.log-empty{text-align:center;color:var(--text3);padding:32px;font-size:12px;}
+
+/* ── INPUTS ── */
+input[type=text],input[type=number],input[type=time],input[type=date],select,textarea{
+  background:var(--surface2);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);font-family:var(--sans);font-size:12px;
+  padding:4px 7px;outline:none;transition:border-color .18s,box-shadow .18s;}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,111,186,.10);}
+input[type=number]{font-family:var(--mono);}
+.iw50{width:50px;text-align:center;}
+.iw60{width:60px;text-align:center;}
+.iw80{width:80px;}
+.iw100{width:100px;}
+.iw120{width:120px;}
+.iw-full{width:100%;}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;
+  font-size:10px;font-weight:600;white-space:nowrap;}
+.bg{background:rgba(23,149,107,.11);color:var(--success);border:1px solid rgba(23,149,107,.28);}
+.bb{background:rgba(26,111,186,.11);color:var(--accent);border:1px solid rgba(26,111,186,.28);}
+.bt{background:rgba(14,159,212,.11);color:var(--accent2);border:1px solid rgba(14,159,212,.28);}
+.bo{background:rgba(230,126,34,.11);color:var(--accent3);border:1px solid rgba(230,126,34,.28);}
+.br{background:rgba(192,57,43,.11);color:var(--danger);border:1px solid rgba(192,57,43,.28);}
+.bw{background:rgba(201,125,10,.11);color:var(--warn);border:1px solid rgba(201,125,10,.28);}
+.bgr{background:rgba(112,144,176,.11);color:var(--text3);border:1px solid var(--border);}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:4px;padding:5px 13px;border-radius:6px;
+  font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:var(--sans);transition:all .18s;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#1a8fd4);color:#fff;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,111,186,.32);}
+.btn-save{background:linear-gradient(135deg,var(--success),#1aaa7a);color:#fff;}
+.btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(23,149,107,.35);}
+.btn-teal{background:linear-gradient(135deg,var(--accent2),#17a0c8);color:#fff;}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:rgba(192,57,43,.08);color:var(--danger);border:1px solid rgba(192,57,43,.22);}
+.btn-danger:hover{background:rgba(192,57,43,.15);}
+.btn-warn{background:rgba(201,125,10,.10);color:var(--warn);border:1px solid rgba(201,125,10,.25);}
+.btn-sm{padding:3px 10px;font-size:11px;}
+.btn-xs{padding:2px 7px;font-size:10px;}
+
+/* ── PROGRESS BAR ── */
+.pbar{background:var(--surface3);border-radius:4px;height:6px;overflow:hidden;display:inline-block;vertical-align:middle;}
+.pfill{height:100%;border-radius:4px;transition:width .4s;}
+.pblue{background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.pgreen{background:linear-gradient(90deg,var(--success),#22c47d);}
+.pyellow{background:linear-gradient(90deg,var(--warn),#f0a030);}
+.pred{background:linear-gradient(90deg,var(--danger),#e74c3c);}
+
+/* ── FORM ── */
+.form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:11px 15px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.flabel{font-size:11px;color:var(--text3);font-weight:600;}
+
+/* ── ALERT ── */
+.alert{border-radius:8px;padding:9px 13px;font-size:12px;display:flex;
+  align-items:flex-start;gap:7px;margin-bottom:9px;line-height:1.5;}
+.al-warn{background:rgba(201,125,10,.07);border:1px solid rgba(201,125,10,.28);color:var(--warn);}
+.al-danger{background:rgba(192,57,43,.07);border:1px solid rgba(192,57,43,.28);color:var(--danger);}
+.al-success{background:rgba(23,149,107,.07);border:1px solid rgba(23,149,107,.28);color:var(--success);}
+.al-info{background:rgba(26,111,186,.07);border:1px solid rgba(26,111,186,.28);color:var(--accent);}
+
+/* ── GANTT ── */
+.gantt-wrap{padding:10px 15px;}
+.gantt-tick-row{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.gantt-spacer{width:76px;flex-shrink:0;}
+.gantt-ticks{flex:1;display:flex;justify-content:space-between;}
+.gantt-tick{font-size:9px;color:var(--text3);font-family:var(--mono);}
+.gantt-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.gantt-name{width:76px;font-size:11px;font-weight:600;color:var(--text2);flex-shrink:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gantt-bar{flex:1;background:var(--surface3);border-radius:5px;height:22px;
+  position:relative;overflow:hidden;border:1px solid var(--border);}
+.gantt-seg{position:absolute;top:0;height:100%;display:flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden;}
+.gantt-seg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3px;}
+.gantt-lbl{width:50px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:right;flex-shrink:0;}
+
+/* ── DAY TABS ── */
+.day-tabs{display:flex;gap:4px;padding:11px 15px 0;flex-wrap:wrap;}
+.dtab{padding:5px 11px;border-radius:5px 5px 0 0;font-size:11px;font-weight:600;cursor:pointer;
+  background:var(--surface3);color:var(--text3);border:1px solid var(--border);border-bottom:none;transition:all .18s;}
+.dtab.active{background:var(--surface);color:var(--accent);border-color:var(--border2);}
+
+/* ── ABILITY CARDS ── */
+.ability-grid{display:flex;flex-wrap:wrap;gap:7px;padding:12px 15px;}
+.ability-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;min-width:160px;flex:1;}
+.ability-card-hdr{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.ability-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.ability-name{font-size:12px;font-weight:700;}
+.ability-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.ability-chip{font-size:10px;padding:2px 7px;border-radius:12px;font-weight:600;}
+.ability-empty{font-size:11px;color:var(--text3);}
+
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(26,42,60,.45);z-index:1000;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.modal{background:var(--surface);border-radius:14px;padding:24px;min-width:320px;max-width:480px;
+  box-shadow:0 8px 40px rgba(26,90,158,.25);border:1px solid var(--border2);}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text);}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* ── LOCK 工序锁定 ── */
+.lock-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:4px;border:none;cursor:pointer;
+  font-size:10px;background:transparent;color:var(--text3);
+  transition:all .15s;padding:0;flex-shrink:0;
+}
+.lock-btn:hover{background:rgba(201,125,10,.15);color:var(--warn);}
+.lock-btn.locked{background:rgba(201,125,10,.18);color:#d4820e;}
+.lock-cell{background:rgba(201,125,10,.07)!important;border:1px solid rgba(201,125,10,.35)!important;}
+.lock-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;
+  background:rgba(201,125,10,.15);color:#c97d0a;border:1px solid rgba(201,125,10,.3);
+  white-space:nowrap;
+}
+/* 锁定弹窗 */
+.lock-popup{
+  position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;box-shadow:0 6px 28px rgba(26,42,60,.22);
+  padding:12px;min-width:180px;max-width:240px;
+}
+.lock-popup-title{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;
+  padding-bottom:6px;border-bottom:1px solid var(--border);}
+.lock-popup-item{
+  display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;
+  cursor:pointer;font-size:12px;transition:background .12s;
+}
+.lock-popup-item:hover{background:var(--surface2);}
+.lock-popup-item.selected{background:rgba(201,125,10,.1);color:#c97d0a;font-weight:700;}
+
+/* ── FROZEN MATRIX 冻结行列 ── */
+.matrix-outer{overflow:auto;max-height:540px;}
+.matrix-outer table{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content;min-width:100%;}
+.matrix-outer th,.matrix-outer td{padding:6px 4px;text-align:center;vertical-align:middle;white-space:nowrap;border-bottom:1px solid var(--border);}
+.matrix-outer th{background:var(--surface3);color:var(--text2);font-weight:600;font-size:11px;border-bottom:2px solid var(--border2);}
+.matrix-outer tr:hover td{background:rgba(26,111,186,.025);}
+/* 冻结表头（上下滚动时固定） */
+.matrix-outer thead tr:first-child th{position:sticky;top:0;z-index:20;background:var(--surface3);}
+.matrix-outer thead tr:nth-child(2) th{position:sticky;top:37px;z-index:20;background:var(--surface3);}
+/* 冻结姓名列（第1列，left:0） */
+.matrix-outer th.fc0,.matrix-outer td.fc0{position:sticky;left:0;z-index:15;background:var(--surface3);border-right:1px solid var(--border2);min-width:90px;max-width:90px;}
+/* 冻结状态列（第2列，left:90px） */
+.matrix-outer th.fc1,.matrix-outer td.fc1{position:sticky;left:90px;z-index:15;background:var(--surface3);border-right:2px solid var(--border2);min-width:70px;max-width:70px;}
+/* 左上角交叉格最高层 */
+.matrix-outer thead tr:first-child th.fc0,.matrix-outer thead tr:first-child th.fc1,
+.matrix-outer thead tr:nth-child(2) th.fc0,.matrix-outer thead tr:nth-child(2) th.fc1{z-index:30;}
+.matrix-outer td.fc0,.matrix-outer td.fc1{background:var(--surface2)!important;}
+
+/* ── CUSTOMER DEMAND WEEK VIEW ── */
+.cd-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:13px 15px;}
+.cd-day-col{background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  padding:9px;min-height:110px;display:flex;flex-direction:column;gap:5px;}
+.cd-day-col.cd-today{border-color:var(--accent);background:rgba(26,111,186,.04);}
+.cd-day-col.cd-overdue{border-color:var(--danger);background:rgba(192,57,43,.03);}
+.cd-day-hdr{font-size:10px;font-weight:700;color:var(--text2);text-align:center;padding-bottom:4px;border-bottom:1px solid var(--border);}
+.cd-day-hdr small{display:block;font-family:var(--mono);font-size:9px;color:var(--text3);font-weight:400;}
+.cd-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;}
+.cd-item-name{font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cd-item-qty{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);}
+.cd-item-cust{font-size:9px;color:var(--text3);}
+.cd-done-btn{width:100%;margin-top:3px;font-size:9px;padding:2px 0;border-radius:4px;cursor:pointer;border:none;
+  background:rgba(23,149,107,.1);color:var(--success);font-weight:700;border:1px solid rgba(23,149,107,.3);}
+.cd-done-btn:hover{background:var(--success);color:#fff;}
+.cd-empty{font-size:10px;color:var(--text3);text-align:center;margin-top:8px;}
+
+/* ── ACHIEVE CONFIRM BAR ── */
+.ach-bar{border-radius:10px;padding:11px 16px;display:flex;align-items:center;
+  gap:12px;flex-wrap:wrap;margin-bottom:11px;border:1px solid;}
+.ach-bar-ok{background:rgba(23,149,107,.06);border-color:rgba(23,149,107,.25);}
+.ach-bar-fail{background:rgba(192,57,43,.06);border-color:rgba(192,57,43,.25);}
+.ach-bar-risk{background:rgba(201,125,10,.06);border-color:rgba(201,125,10,.25);}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--surface3);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+@keyframes spin-btn{to{transform:rotate(360deg);}}
+.btn-spinning{animation:spin-btn .5s linear;}
+@media print{.no-print{display:none!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🔬</div>
+    <div>
+      <div class="logo-name">检验排产管理系统</div>
+      <div class="logo-sub">QC Scheduling · Process-Level v10</div>
+    </div>
+  </div>
+  <div class="live-clock" id="live-clock">
+    <div class="clock-time" id="clock-time">--:--:--</div>
+    <div class="clock-date" id="clock-date">----/--/-- 星期-</div>
+  </div>
+</header>
+
+<!-- ══ SAVE BAR ══ -->
+<div class="save-bar no-print">
+  <div class="save-status">
+    <div class="save-dot" id="save-dot"></div>
+    <span id="save-label" style="color:var(--text2);">未保存</span>
+    <span id="save-time" style="color:var(--text3);font-size:11px;font-family:var(--mono);"></span>
+  </div>
+  <div class="save-actions">
+    <button class="btn btn-save" onclick="saveData()">💾 保存数据</button>
+    <button class="btn btn-primary btn-sm" id="glob-refresh-btn" onclick="doGlobalRefresh(this)" title="刷新所有数据并保存">🔄 刷新保存</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadData()">📂 导入存档</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportJSON()">📤 导出JSON</button>
+    <button class="btn btn-danger btn-sm" onclick="clearSave()">🗑 清除存档</button>
+  </div>
+</div>
+
+<!-- ══ NAV ══ -->
+<div class="nav">
+  <div class="tab active"  onclick="ST('t-overview')">📊 概览排产</div>
+  <div class="tab"         onclick="ST('t-cdemand')">🚚 客户需求</div>
+  <div class="tab"         onclick="ST('t-progress')">📈 完成情况</div>
+  <div class="tab"         onclick="ST('t-log')">🗓 日期日志</div>
+  <div class="tab"         onclick="ST('t-personnel')">👥 人员配置</div>
+  <div class="tab"         onclick="ST('t-products')">📦 产品工序</div>
+  <div class="tab"         onclick="ST('t-demand')">📋 需求库存</div>
+  <div class="tab"         onclick="ST('t-schedule')">⏱ 多天排程</div>
+  <div class="tab"         onclick="ST('t-recruit')">➕ 增员</div>
+</div>
+
+<div class="content">
+
+<!-- ══════════════ OVERVIEW ══════════════ -->
+<div class="panel active" id="t-overview">
+
+  <div class="kpi-row">
+    <div class="kpi c1"><div class="kpi-label">在岗人员</div><div class="kpi-val" id="k-staff">0</div><div class="kpi-sub" id="k-staff-s">共0人</div></div>
+    <div class="kpi c2"><div class="kpi-label">今日净需检(pcs)</div><div class="kpi-val" id="k-pending">0</div><div class="kpi-sub">待完成</div></div>
+    <div class="kpi c3"><div class="kpi-label">今日计划产量</div><div class="kpi-val" id="k-plan">0</div><div class="kpi-sub">pcs/班</div></div>
+    <div class="kpi c4"><div class="kpi-label">预计完成</div><div class="kpi-val" id="k-eta">--:--</div><div class="kpi-sub" id="k-eta-d">今日</div></div>
+    <div class="kpi c5"><div class="kpi-label">达产判定</div>
+      <div id="k-achieve" style="margin-top:4px;">
+        <span class="achieve ach-risk">— 待计算</span>
+      </div>
+      <div class="kpi-sub" id="k-achieve-sub">点击分配后判定</div>
+    </div>
+    <div class="kpi c6"><div class="kpi-label">工序缺口</div><div class="kpi-val" id="k-gap">0</div><div class="kpi-sub">种产品有缺口</div></div>
+  </div>
+
+  <div id="ov-alerts"></div>
+  <!-- 达产确认栏（分配后出现） -->
+  <div id="ach-confirm-bar"></div>
+
+  <!-- TODAY TABLE -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-b">📅</div>今日人员分配表</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm no-print" onclick="autoAssign()">⚡ 立即分配</button>
+        <button class="btn btn-ghost btn-sm no-print" id="ov-refresh-btn" onclick="doGlobalRefresh(this)">🔄 刷新</button>
+        <button class="btn btn-ghost btn-sm no-print" onclick="recordToLog()">📝 记录到日志</button>
+        <button class="btn btn-ghost btn-sm no-print" onclick="ST('t-schedule')">多天排程 →</button>
+      </div>
+    </div>
+    <div class="tw" id="ov-table-wrap">
+      <div style="text-align:center;color:var(--text3);padding:28px;font-size:12px">
+        请在「需求库存」填写数据，点击「立即分配」生成排产
+      </div>
+    </div>
+  </div>
+
+  <!-- GANTT + GAP -->
+  <div class="g2">
+    <div class="sec">
+      <div class="sec-head"><div class="sec-title"><div class="sicon si-t">📈</div>今日甘特图</div></div>
+      <div id="ov-gantt"><div style="text-align:center;color:var(--text3);padding:22px;font-size:12px">分配后显示</div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-title"><div class="sicon si-r">⚠</div>发货缺口预警</div></div>
+      <div style="padding:11px 15px;" id="ov-gap"></div>
+    </div>
+  </div>
+
+</div><!-- /overview -->
+
+<!-- ══════════════ PROGRESS (per-worker completion) ══════════════ -->
+<div class="panel" id="t-progress">
+
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-g">📈</div>每人今日完成情况</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);">实际已检(pcs)：</span>
+        <button class="btn btn-ghost btn-sm" onclick="renderProgress()">🔄 刷新</button>
+        <button class="btn btn-primary btn-sm" onclick="autoAssign();ST('t-overview')">⚡ 重新分配</button>
+      </div>
+    </div>
+    <!-- Input actual done per worker per task -->
+    <div style="padding:10px 15px 4px;font-size:11px;color:var(--text3);">
+      💡 在下方输入每人实际已检数量，系统自动计算完成率和是否达产
+    </div>
+    <div class="worker-progress-grid" id="progress-grid">
+      <div style="text-align:center;color:var(--text3);padding:24px;font-size:12px;grid-column:1/-1;">请先完成「概览排产」的分配后查看</div>
+    </div>
+  </div>
+
+  <!-- OVERALL ACHIEVE TABLE -->
+  <div class="sec">
+    <div class="sec-head"><div class="sec-title"><div class="sicon si-b">🏆</div>今日团队达产汇总</div></div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th class="L">检验员</th>
+          <th>计划产量(pcs)</th>
+          <th>实际已检(pcs)</th>
+          <th>完成率</th>
+          <th>进度</th>
+          <th>当前时段达产</th>
+          <th>预计全天</th>
+          <th>状态</th>
+        </tr></thead>
+        <tbody id="achieve-body"></tbody>
+        <tfoot><tr id="achieve-foot" style="background:var(--surface3);font-weight:700;"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /progress -->
+
+<!-- ══════════════ CUSTOMER DEMAND 客户需求 ══════════════ -->
+<div class="panel" id="t-cdemand">
+
+  <!-- 录入 -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-o">➕</div>录入客户需求</div>
+      <button class="btn btn-ghost btn-sm" onclick="openMoldManagerModal()">⚙ 管理客户 & 模具号</button>
+    </div>
+    <div class="form-row" style="align-items:flex-end;">
+      <!-- 客户筛选（可选，选了则过滤模具号） -->
+      <div class="fg">
+        <div class="flabel" style="color:var(--text3);">按客户筛选（可选）</div>
+        <select id="cd-filter-by-cust" class="iw120" onchange="onFilterCustChange()">
+          <option value="">全部客户</option>
+        </select>
+      </div>
+      <!-- 模具号下拉（主选项） -->
+      <div class="fg">
+        <div class="flabel">模具号 <span id="cd-auto-cust" style="font-size:11px;font-weight:700;color:var(--accent2);margin-left:6px;"></span></div>
+        <select id="cd-prod" class="iw140" onchange="onCDProdChange()">
+          <option value="">-- 选择模具号 --</option>
+        </select>
+      </div>
+      <div class="fg"><div class="flabel">交货日期</div><input type="date" id="cd-date" class="iw120"></div>
+      <div class="fg"><div class="flabel">需求数量(pcs)</div><input type="number" id="cd-qty" min="1" class="iw80" placeholder="0"></div>
+      <div class="fg"><div class="flabel">订单号(可选)</div><input type="text" id="cd-orderno" class="iw120" placeholder="订单号"></div>
+      <button class="btn btn-primary" onclick="addCDemand()" style="align-self:flex-end;">✅ 添加</button>
+    </div>
+  </div>
+
+  <!-- 未来7天 -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-b">📅</div>未来7天交货计划</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="cd-stat" style="font-size:11px;color:var(--text3);"></span>
+        <button class="btn btn-ghost btn-sm" onclick="renderCDemand()">🔄 刷新</button>
+      </div>
+    </div>
+    <div class="cd-week-grid" id="cd-week"></div>
+  </div>
+
+  <!-- 全部订单查询 & 编辑 -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-t">🔍</div>全部后续订单查询 & 编辑</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="fg" style="flex-direction:row;align-items:center;gap:5px;">
+          <div class="flabel">筛选产品</div>
+          <select id="cd-filter-prod" class="iw120" onchange="renderAllOrders()"><option value="">全部产品</option></select>
+        </div>
+        <div class="fg" style="flex-direction:row;align-items:center;gap:5px;">
+          <div class="flabel">筛选客户</div>
+          <select id="cd-filter-cust" class="iw120" onchange="renderAllOrders()">
+            <option value="">全部客户</option>
+          </select>
+        </div>
+        <div class="fg" style="flex-direction:row;align-items:center;gap:5px;">
+          <div class="flabel">日期起</div>
+          <input type="date" id="cd-filter-from" class="iw120" oninput="renderAllOrders()">
+        </div>
+        <div class="fg" style="flex-direction:row;align-items:center;gap:5px;">
+          <div class="flabel">日期止</div>
+          <input type="date" id="cd-filter-to" class="iw120" oninput="renderAllOrders()">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearOrderFilters()">重置筛选</button>
+        <span id="cd-all-stat" style="font-size:11px;color:var(--text3);"></span>
+      </div>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th class="L">产品</th>
+          <th class="L">客户/订单号</th>
+          <th>需求数量(pcs)</th>
+          <th>交货日期</th>
+          <th>距今(天)</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr></thead>
+        <tbody id="cd-all-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 历史 -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-g">✅</div>已完成发货历史</div>
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('确认清空历史？')){S.cdHistory=[];renderCDHistory();markUnsaved();}">🗑 清空</button>
+    </div>
+    <div class="tw"><table>
+      <thead><tr>
+        <th class="L">产品</th><th class="L">客户/订单号</th>
+        <th>需求数量</th><th>交货日期</th><th>确认完成时间</th><th>操作</th>
+      </tr></thead>
+      <tbody id="cd-hist-body"></tbody>
+    </table></div>
+  </div>
+
+</div><!-- /cdemand -->
+
+<!-- ══════════════ LOG ══════════════ -->
+<div class="panel" id="t-log">
+
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-b">🗓</div>日期日志</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="renderLog()">🔄 刷新</button>
+        <button class="btn btn-danger btn-sm" onclick="clearLog()">🗑 清空日志</button>
+      </div>
+    </div>
+    <!-- Date filter -->
+    <div class="log-date-bar">
+      <div class="fg"><div class="flabel">筛选日期</div><input type="date" id="log-filter-date" class="iw120" oninput="renderLog()"></div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('log-filter-date').value='';renderLog()">显示全部</button>
+      <span style="font-size:11px;color:var(--text3);" id="log-count">共 0 条记录</span>
+    </div>
+    <div class="tw" id="log-table-wrap">
+      <div class="log-empty">暂无日志记录，在概览页点击「记录到日志」保存每日排产</div>
+    </div>
+  </div>
+
+</div><!-- /log -->
+
+<!-- ══════════════ PERSONNEL ══════════════ -->
+<div class="panel" id="t-personnel">
+
+  <!-- ABILITY SUMMARY -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-b">👤</div>员工会检工序汇总</div>
+      <span style="font-size:11px;color:var(--text3);">根据技能矩阵自动生成 · 点击格子切换「会检/不会」</span>
+    </div>
+    <div class="ability-grid" id="ability-cards"></div>
+  </div>
+
+  <!-- LOCK SUMMARY 锁定汇总 -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-o">🔒</div>已锁定工序（强制指派）</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text3);">锁定的工序排产时强制分配给指定人员，其他人不参与</span>
+        <button class="btn btn-danger btn-sm" onclick="if(confirm('确认清空所有锁定？')){S.locks={};renderMatrix();renderLockSummary();markUnsaved();}">🗑 清空锁定</button>
+      </div>
+    </div>
+    <div style="padding:10px 15px;" id="lock-summary">
+      <div style="text-align:center;color:var(--text3);font-size:12px;padding:14px;">暂无锁定工序，在技能矩阵格子点击 🔓 可锁定</div>
+    </div>
+  </div>
+
+  <!-- SKILL MATRIX -->
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-t">🧩</div>工序技能矩阵（pcs/h）</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm" onclick="addWorker()">➕ 添加人员</button>
+      </div>
+    </div>
+    <div style="padding:5px 15px 8px;font-size:11px;color:var(--text3);line-height:1.8;">
+      ✅ <b>会检</b>：点击 ✓/✕ 切换 &nbsp;|&nbsp; <b>pcs/h</b>：小时产量 &nbsp;|&nbsp;
+      ⭐ <b>熟练度</b>（点击格子循环切换，<b>排程时优先安排高熟练度人员</b>）：
+      <span style="color:#b0bec5;font-weight:600;">○○○ 普通</span> →
+      <span style="color:#f57c00;font-weight:600;">★○○ 较熟</span> →
+      <span style="color:#1565c0;font-weight:600;">★★○ 熟练</span> →
+      <span style="color:#c0392b;font-weight:600;">★★★ 专精</span>
+    </div>
+    <div class="matrix-outer" id="matrix-wrap">加载中...</div>
+  </div>
+
+  <!-- SHIFT CONFIG -->
+  <div class="sec">
+    <div class="sec-head"><div class="sec-title"><div class="sicon si-o">⏰</div>班次时间</div></div>
+    <div class="form-row">
+      <div class="fg"><div class="flabel">上班</div><input type="time" id="sh-s" value="08:00" onchange="saveShift()" class="iw100"></div>
+      <div class="fg"><div class="flabel">下班</div><input type="time" id="sh-e" value="20:00" onchange="saveShift()" class="iw100"></div>
+      <div class="fg"><div class="flabel">午休开始</div><input type="time" id="sh-ls" value="12:00" onchange="saveShift()" class="iw100"></div>
+      <div class="fg"><div class="flabel">午休结束</div><input type="time" id="sh-le" value="13:00" onchange="saveShift()" class="iw100"></div>
+      <div class="fg"><div class="flabel">有效工时</div>
+        <div id="sh-eff" style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);padding-top:2px;">11.0h</div>
+      </div>
+      <button class="btn btn-primary" onclick="saveShift()" style="align-self:flex-end;">✅ 保存</button>
+    </div>
+  </div>
+
+</div><!-- /personnel -->
+
+<!-- ══════════════ PRODUCTS ══════════════ -->
+<div class="panel" id="t-products">
+
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-o">📦</div>产品列表（<span id="prod-cnt">0</span> 种）</div>
+      <button class="btn btn-primary btn-sm" onclick="addProduct()">➕ 添加产品</button>
+    </div>
+    <div class="tw">
+      <table id="prod-table">
+        <thead><tr>
+          <th class="L" style="width:30px">#</th>
+          <th class="L">产品名称（模具号）</th>
+          <th>客户</th>
+          <th>难度</th>
+          <th>工序数</th>
+          <th>操作</th>
+        </tr></thead>
+        <tbody id="prod-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-b">🔧</div>工序名称编辑</div>
+      <select id="proc-sel" class="iw120" onchange="renderProcEditor()">
+        <option value="">-- 选择产品 --</option>
+      </select>
+    </div>
+    <div id="proc-editor" style="padding:14px 15px;">
+      <div style="text-align:center;color:var(--text3);font-size:12px;padding:14px;">请选择产品</div>
+    </div>
+  </div>
+
+</div><!-- /products -->
+
+<!-- ══════════════ DEMAND ══════════════ -->
+<div class="panel" id="t-demand">
+
+  <div style="display:flex;gap:8px;margin-bottom:11px;align-items:center;flex-wrap:wrap;">
+    <button class="btn btn-primary" onclick="calcAndAssign()">⚡ 计算 & 立即分配</button>
+    <button class="btn btn-ghost" onclick="clearDemand()">🗑 清空数量</button>
+    <span style="font-size:11px;color:var(--text3);">💡 填完后点击「计算&立即分配」自动跳到概览</span>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-b">📋</div>产品需求 & 库存（<span id="dem-cnt">0</span> 种）</div>
+    </div>
+    <div class="tw">
+      <table id="dem-table">
+        <thead><tr>
+          <th class="L" style="width:26px">#</th>
+          <th class="L">产品（模具号）</th>
+          <th class="L">客户（自动识别）</th>
+          <th>库存(pcs)</th>
+          <th>客户需求</th>
+          <th>待检总量</th>
+          <th>上月不良率%</th>
+          <th>预计不良</th>
+          <th>净需检量</th>
+          <th>优先级</th>
+          <th>截止日期</th>
+          <th>截止时间</th>
+        </tr></thead>
+        <tbody id="dem-body"></tbody>
+        <tfoot><tr style="background:var(--surface3);font-weight:700;">
+          <td colspan="3" class="L" style="padding-left:13px;font-size:12px;color:var(--text2);">合计</td>
+          <td id="ft-stock" style="font-family:var(--mono);">0</td>
+          <td id="ft-demand" style="font-family:var(--mono);">0</td>
+          <td id="ft-pending" style="font-family:var(--mono);">0</td>
+          <td>—</td>
+          <td id="ft-defect" style="font-family:var(--mono);">0</td>
+          <td id="ft-net" style="font-family:var(--mono);color:var(--accent);font-size:13px;">0</td>
+          <td colspan="3">—</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">
+      <div class="sec-title"><div class="sicon si-t">🔧</div>各工序完成进度</div>
+      <span style="font-size:11px;color:var(--text3);">输入各序已完成数量，自动计算瓶颈和发货缺口</span>
+    </div>
+    <div class="tw">
+      <table id="proc-status-table">
+        <thead><tr id="proc-status-head"></tr></thead>
+        <tbody id="proc-status-body"></tbody>
+      </table>
+    </div>
+    <div id="proc-gap-advice" style="padding:0 15px 12px;"></div>
+  </div>
+
+</div><!-- /demand -->
+
+<!-- ══════════════ SCHEDULE ══════════════ -->
+<div class="panel" id="t-schedule">
+
+  <div class="sec">
+    <div class="sec-head"><div class="sec-title"><div class="sicon si-o">⚙</div>多天排程参数</div></div>
+    <div class="form-row">
+      <div class="fg"><div class="flabel">起始日期</div><input type="date" id="sd-date" class="iw120"></div>
+      <div class="fg"><div class="flabel">排程天数</div><input type="number" id="sd-days" value="3" min="1" max="14" class="iw60"></div>
+      <div class="fg"><div class="flabel">策略</div>
+        <select id="sd-strategy" class="iw120">
+          <option value="balance">均衡分配</option>
+          <option value="priority">优先级优先</option>
+          <option value="skill">产量优先</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="runMultiDay()" style="align-self:flex-end;">🚀 生成排程</button>
+    </div>
+  </div>
+
+  <div id="sched-output">
+    <div style="text-align:center;color:var(--text3);padding:36px;font-size:13px;">
+      请先在「需求库存」填写数据后生成排程
+    </div>
+  </div>
+
+</div><!-- /schedule -->
+
+<!-- ══════════════ RECRUIT ══════════════ -->
+<div class="panel" id="t-recruit">
+  <div class="g2">
+    <div class="sec">
+      <div class="sec-head"><div class="sec-title"><div class="sicon si-g">➕</div>新增人员登记</div></div>
+      <div style="padding:15px;display:flex;flex-direction:column;gap:9px;">
+        <div class="fg"><div class="flabel">姓名</div><input type="text" id="r-name" class="iw-full" placeholder="输入姓名"></div>
+        <div class="fg"><div class="flabel">工号</div><input type="text" id="r-id" class="iw-full" placeholder="如 QC-016"></div>
+        <div class="fg"><div class="flabel">入职日期</div><input type="date" id="r-date" class="iw-full"></div>
+        <div class="fg"><div class="flabel">培训天数</div><input type="number" id="r-train" value="30" class="iw-full"></div>
+        <div class="fg"><div class="flabel">备注</div><input type="text" id="r-note" class="iw-full" placeholder="可选填"></div>
+        <button class="btn btn-primary" onclick="addRecruit()" style="width:100%">✅ 登记入册</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-title"><div class="sicon si-b">📈</div>产能提升预测</div></div>
+      <div style="padding:15px;" id="r-forecast"><div style="text-align:center;color:var(--text3);font-size:12px;padding:18px">添加人员后显示</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-head"><div class="sec-title"><div class="sicon si-t">📋</div>待入职 & 培训中</div></div>
+    <div class="tw"><table>
+      <thead><tr>
+        <th class="L">姓名</th><th>工号</th><th>入职日期</th><th>培训天数</th>
+        <th>预计上岗</th><th>当前进度</th><th>备注</th><th>操作</th>
+      </tr></thead>
+      <tbody id="r-body"></tbody>
+    </table></div>
+  </div>
+</div><!-- /recruit -->
+
+</div><!-- content -->
+</div><!-- app -->
+
+<!-- ══ MOLD MANAGER MODAL ══ -->
+<div class="modal-bg" id="mold-modal" style="display:none;">
+  <div class="modal" style="min-width:480px;max-width:620px;max-height:80vh;overflow-y:auto;">
+    <div class="modal-title">⚙ 客户 & 模具号管理</div>
+    <div id="mold-modal-body"></div>
+    <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">➕ 新增客户 / 在已有客户下新增模具号</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="fg">
+          <div class="flabel">客户名称</div>
+          <input type="text" id="mm-cust" class="iw120" placeholder="如：百得（已有可选）" list="mm-cust-list">
+          <datalist id="mm-cust-list"></datalist>
+        </div>
+        <div class="fg">
+          <div class="flabel">模具号（多个用逗号分隔）</div>
+          <input type="text" id="mm-molds" class="iw180" placeholder="如：2200,2201">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="doAddMoldCustomer()">✅ 确认添加</button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="document.getElementById('mold-modal').style.display='none'">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SAVE MODAL ══ -->
+<div class="modal-bg" id="save-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-title">📂 导入存档</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">粘贴之前导出的JSON内容：</div>
+    <textarea id="import-json" style="width:100%;height:120px;font-family:var(--mono);font-size:11px;
+      background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;resize:vertical;outline:none;" placeholder='{"workers":[...],...}'></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="document.getElementById('save-modal').style.display='none'">取消</button>
+      <button class="btn btn-primary" onclick="doImport()">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ════════════════════════════════════════════════════════════
+const COLORS=['#1a6fba','#0e9fd4','#1a9e5a','#e67e22','#8e44ad',
+  '#c0392b','#16a085','#d4820e','#2471a3','#7d3c98',
+  '#1e8449','#ca6f1e','#1a5276','#6e2f8e','#117a65'];
+const WDAYS=['日','一','二','三','四','五','六'];
+
+// 客户-模具号映射（模具号→客户名）
+// 客户-模具号映射（真正的常量，运行时通过 S.moldCustomer 扩展）
+const INIT_MOLD_CUSTOMER={
+  '1713':'百得','1745':'百得','1919':'百得',
+  '2114':'百得','2115':'百得','2120':'百得','2121':'百得',
+  '2123':'百得','2185':'百得',
+  '1951':'长春法雷奥','1984':'博格华纳','2030':'THW公司',
+  '2032':'上海延锋','2055':'上海延锋',
+  '2037':'南京法雷奥','2048':'西班牙法雷奥','2087':'西班牙法雷奥',
+  '2119':'世野','2129':'杭州中力',
+  '2133':'河北麦格纳','2134':'河北麦格纳','2142':'河北麦格纳','2143':'河北麦格纳',
+};
+const INIT_CUSTOMERS=[
+  '百得','长春法雷奥','博格华纳','THW公司','上海延锋',
+  '南京法雷奥','西班牙法雷奥','世野','杭州中力','河北麦格纳',
+];
+// 合并初始+动态扩展的映射
+function getMoldCustomer(){
+  if(typeof S==='undefined') return INIT_MOLD_CUSTOMER;
+  if(!S.moldCustomer) return INIT_MOLD_CUSTOMER;
+  return Object.assign({},INIT_MOLD_CUSTOMER,S.moldCustomer);
+}
+// 合并初始+动态扩展的客户列表（去重）
+function getAllCustomers(){
+  if(typeof S==='undefined') return INIT_CUSTOMERS;
+  if(!S.customers||!S.customers.length) return INIT_CUSTOMERS;
+  const merged=[...INIT_CUSTOMERS];
+  S.customers.forEach(c=>{if(!merged.includes(c))merged.push(c);});
+  return merged;
+}
+
+// ════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════
+const S={
+  workers:[
+    {id:'QC-001',name:'张伟', status:'在岗',color:'#1a6fba',skills:{}},
+    {id:'QC-002',name:'李娜', status:'在岗',color:'#0e9fd4',skills:{}},
+    {id:'QC-003',name:'王磊', status:'在岗',color:'#1a9e5a',skills:{}},
+    {id:'QC-004',name:'刘芳', status:'在岗',color:'#e67e22',skills:{}},
+    {id:'QC-005',name:'陈强', status:'在岗',color:'#8e44ad',skills:{}},
+    {id:'QC-006',name:'赵敏', status:'请假',color:'#c0392b',skills:{}},
+    {id:'QC-007',name:'孙洁', status:'在岗',color:'#16a085',skills:{}},
+    {id:'QC-008',name:'周刚', status:'在岗',color:'#d4820e',skills:{}},
+  ],
+  products:[
+    {id:'P1713',name:'1713#',model:'1713',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P1745',name:'1745#',model:'1745',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P1919',name:'1919#',model:'1919',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2114',name:'2114#',model:'2114',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2115',name:'2115#',model:'2115',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2120',name:'2120#',model:'2120',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2121',name:'2121#',model:'2121',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2123',name:'2123#',model:'2123',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2185',name:'2185#',model:'2185',difficulty:'中',customer:'百得',processes:['序1检验','序2检验','序3检验']},
+    {id:'P1951',name:'1951#',model:'1951',difficulty:'中',customer:'长春法雷奥',processes:['序1检验','序2检验','序3检验']},
+    {id:'P1984',name:'1984#',model:'1984',difficulty:'中',customer:'博格华纳',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2030',name:'2030#',model:'2030',difficulty:'中',customer:'THW公司',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2032',name:'2032#',model:'2032',difficulty:'中',customer:'上海延锋',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2055',name:'2055#',model:'2055',difficulty:'中',customer:'上海延锋',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2037',name:'2037#',model:'2037',difficulty:'中',customer:'南京法雷奥',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2048',name:'2048#',model:'2048',difficulty:'中',customer:'西班牙法雷奥',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2087',name:'2087#',model:'2087',difficulty:'中',customer:'西班牙法雷奥',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2119',name:'2119#',model:'2119',difficulty:'中',customer:'世野',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2129',name:'2129#',model:'2129',difficulty:'中',customer:'杭州中力',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2133',name:'2133#',model:'2133',difficulty:'中',customer:'河北麦格纳',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2134',name:'2134#',model:'2134',difficulty:'中',customer:'河北麦格纳',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2142',name:'2142#',model:'2142',difficulty:'中',customer:'河北麦格纳',processes:['序1检验','序2检验','序3检验']},
+    {id:'P2143',name:'2143#',model:'2143',difficulty:'中',customer:'河北麦格纳',processes:['序1检验','序2检验','序3检验']},
+  ],
+  demands:[],
+  procDone:{},
+  recruits:[],
+  shift:{start:'08:00',end:'20:00',lunchS:'12:00',lunchE:'13:00'},
+  lastAssign:null,
+  // actualDone: { [workerIdx_taskKey]: actualPcs }
+  actualDone:{},
+  // log: [{date, assign snapshot, summary}]
+  log:[],
+  // 客户需求
+  cdDemands:[],   // {id,pid,prodName,date,qty,cust,createdAt}
+  cdHistory:[],   // completed items
+  // 当日达产确认
+  dayConfirm:{},  // {date: {confirmed:bool, actual:number}}
+  // 工序锁定  locks['pid_pci'] = workerId  (强制指派某人做某工序)
+  locks:{},
+  // 客户管理（可动态扩展）
+  customers:null,      // null时用INIT_CUSTOMERS
+  moldCustomer:null,   // null时用INIT_MOLD_CUSTOMER
+  savedAt:null,
+};
+
+// 根据模具号/产品名推断客户（提取其中的数字部分查映射表）
+function inferCustomer(model){
+  const m=(model||'').replace(/[^0-9]/g,'');
+  if(!m) return '';
+  return getMoldCustomer()[m]||'';
+}
+
+// ════════════════════════════════════════════════════════════
+//  SEED DEMO SKILLS  (on/off + hourly)
+// ════════════════════════════════════════════════════════════
+function seedSkills(){
+  // 真实产品数据已内置，技能矩阵由用户在「人员配置」中手动配置
+  // 此处不预置示例技能，避免与真实产品ID冲突
+}
+
+// ════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════
+const t2m=t=>{const[h,m]=t.split(':').map(Number);return h*60+m;};
+const m2t=m=>{const h=Math.floor(m/60),mm=Math.round(m%60);return`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;};
+const effH=()=>(t2m(S.shift.end)-t2m(S.shift.start)-(t2m(S.shift.lunchE)-t2m(S.shift.lunchS)))/60;
+const today=()=>new Date().toISOString().slice(0,10);
+const addDays=(ds,n)=>{const d=new Date(ds);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+const fmtDate=ds=>{const d=new Date(ds);return`${d.getMonth()+1}/${d.getDate()}`;};
+const getNet=d=>Math.max(0,(d.pending||0)-(d.stock||0)+Math.round((d.pending||0)*(d.defectRate||0)/100));
+// pref: 0=普通 1=较熟 2=熟练 3=专精（优先安排）
+const getSkill=(w,pid,pci)=>(w.skills[pid]||{})[pci]||{on:false,hourly:0,pref:0};
+const markUnsaved=()=>{
+  document.getElementById('save-dot').className='save-dot dot-unsaved';
+  document.getElementById('save-label').textContent='有未保存的更改';
+};
+
+// ════════════════════════════════════════════════════════════
+//  LIVE CLOCK
+// ════════════════════════════════════════════════════════════
+function startClock(){
+  function tick(){
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,'0');
+    const mm=String(now.getMinutes()).padStart(2,'0');
+    const ss=String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock-time').textContent=`${hh}:${mm}:${ss}`;
+    const y=now.getFullYear(),mo=now.getMonth()+1,d=now.getDate();
+    const wd=WDAYS[now.getDay()];
+    document.getElementById('clock-date').textContent=`${y}/${String(mo).padStart(2,'0')}/${String(d).padStart(2,'0')} 星期${wd}`;
+    document.getElementById('hDate') && (document.getElementById('hDate').textContent=`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    // Progress refresh (light, no DOM rebuild)
+    updateProgressLive();
+  }
+  tick();setInterval(tick,1000);
+}
+
+// ════════════════════════════════════════════════════════════
+//  SAVE / LOAD  (manual only, NO auto-save)
+// ════════════════════════════════════════════════════════════
+function saveData(){
+  try{
+    const payload=JSON.stringify({
+      workers:S.workers,products:S.products,demands:S.demands,
+      procDone:S.procDone,recruits:S.recruits,shift:S.shift,
+      actualDone:S.actualDone,log:S.log,
+      cdDemands:S.cdDemands,cdHistory:S.cdHistory,dayConfirm:S.dayConfirm,
+      locks:S.locks,
+      customers:S.customers,moldCustomer:S.moldCustomer,
+      savedAt:new Date().toISOString()
+    });
+    localStorage.setItem('qc_inspection_data',payload);
+    // 同时写旧键，确保V4等旧版也能读取
+    localStorage.setItem('qc_save_v4',payload);
+    S.savedAt=new Date();
+    document.getElementById('save-dot').className='save-dot dot-saved';
+    document.getElementById('save-label').textContent='已保存';
+    document.getElementById('save-time').textContent=` · ${m2t(new Date().getHours()*60+new Date().getMinutes())}`;
+    showToast('✅ 数据已保存到本地');
+  }catch(e){showToast('❌ 保存失败：'+e.message,'error');}
+}
+
+function loadData(){
+  document.getElementById('save-modal').style.display='flex';
+}
+
+function doImport(){
+  try{
+    const raw=document.getElementById('import-json').value.trim();
+    const obj=JSON.parse(raw);
+    if(!obj.workers||!obj.products) throw new Error('格式不正确');
+    Object.assign(S,obj);
+    S.cdDemands=S.cdDemands||[];
+    S.cdHistory=S.cdHistory||[];
+    S.dayConfirm=S.dayConfirm||{};
+    S.locks=S.locks||{};
+    S.customers=S.customers||null;
+    S.moldCustomer=S.moldCustomer||null;
+    document.getElementById('save-modal').style.display='none';
+    init(false);
+    saveData(); // 立即写入新通用键
+    showToast('✅ 导入成功，已自动保存');
+  }catch(e){showToast('❌ 导入失败：'+e.message,'error');}
+}
+
+function exportJSON(){
+  const payload=JSON.stringify({
+    workers:S.workers,products:S.products,demands:S.demands,
+    procDone:S.procDone,recruits:S.recruits,shift:S.shift,
+    actualDone:S.actualDone,log:S.log,
+    cdDemands:S.cdDemands,cdHistory:S.cdHistory,dayConfirm:S.dayConfirm,
+    locks:S.locks,
+    customers:S.customers,moldCustomer:S.moldCustomer,
+  },null,2);
+  const blob=new Blob([payload],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`qc_data_${today()}.json`;a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 已导出JSON文件');
+}
+
+function clearSave(){
+  if(!confirm('确认清除本地存档？此操作不可恢复。'))return;
+  localStorage.removeItem('qc_inspection_data');
+  localStorage.removeItem('qc_save_v4');
+  document.getElementById('save-dot').className='save-dot dot-unsaved';
+  document.getElementById('save-label').textContent='存档已清除';
+  showToast('🗑 本地存档已清除');
+}
+
+function tryLoadSave(){
+  // 依次尝试读取：通用键 → V4旧键（向后兼容所有旧版本）
+  const KEYS=['qc_inspection_data','qc_save_v4'];
+  let raw=null, fromKey='';
+  for(const k of KEYS){
+    const v=localStorage.getItem(k);
+    if(v){raw=v;fromKey=k;break;}
+  }
+  if(!raw)return false;
+  try{
+    const obj=JSON.parse(raw);
+    Object.assign(S,obj);
+    // 兼容旧版本缺失字段
+    S.cdDemands=S.cdDemands||[];
+    S.cdHistory=S.cdHistory||[];
+    S.dayConfirm=S.dayConfirm||{};
+    S.locks=S.locks||{};
+    S.customers=S.customers||null;
+    S.moldCustomer=S.moldCustomer||null;
+    // 强制补全所有产品customer字段（兼容旧存档格式）
+    if(S.products){S.products.forEach(p=>{if(!p.customer){const num=(p.model||p.name||'').replace(/[^0-9]/g,'');p.customer=getMoldCustomer()[num]||'';}});}
+    if(S.demands){S.demands.forEach(d=>{if(!d.customer){const p=S.products&&S.products.find(x=>x.id===d.pid);d.customer=p?p.customer:'';}});}
+    document.getElementById('save-dot').className='save-dot dot-saved';
+    document.getElementById('save-time').textContent=obj.savedAt?` · ${obj.savedAt.slice(0,16).replace('T',' ')}保存`:'';
+    // 如果是从旧键读取，立即迁移到新键
+    if(fromKey!=='qc_inspection_data'){
+      localStorage.setItem('qc_inspection_data',raw);
+    }
+    return true;
+  }catch{return false;}
+}
+
+// ════════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════════
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.style.cssText=`position:fixed;bottom:24px;right:24px;z-index:9999;
+    padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;
+    color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.18);transition:opacity .4s;
+    background:${type==='error'?'var(--danger)':'var(--success)'};`;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);},2200);
+}
+
+// ════════════════════════════════════════════════════════════
+//  TAB SWITCH
+// ════════════════════════════════════════════════════════════
+const TABS=['t-overview','t-cdemand','t-progress','t-log','t-personnel','t-products','t-demand','t-schedule','t-recruit'];
+function ST(id){
+  TABS.forEach(t=>{document.getElementById(t).classList.toggle('active',t===id);});
+  document.querySelectorAll('.tab').forEach((el,i)=>{el.classList.toggle('active',TABS[i]===id);});
+  if(id==='t-log')renderLog();
+  if(id==='t-progress')renderProgress();
+  if(id==='t-cdemand'){initCDProdSel();renderCDemand();renderCDHistory();initOrderFilterProd();renderAllOrders();}
+}
+
+// ════════════════════════════════════════════════════════════
+//  SHIFT
+// ════════════════════════════════════════════════════════════
+function saveShift(){
+  S.shift.start=document.getElementById('sh-s').value||'08:00';
+  S.shift.end=document.getElementById('sh-e').value||'20:00';
+  S.shift.lunchS=document.getElementById('sh-ls').value||'12:00';
+  S.shift.lunchE=document.getElementById('sh-le').value||'13:00';
+  document.getElementById('sh-eff').textContent=effH().toFixed(1)+'h';
+  updateKPI();markUnsaved();
+}
+
+// ════════════════════════════════════════════════════════════
+//  SKILL MATRIX (on/off + hourly only, no level)
+// ════════════════════════════════════════════════════════════
+function renderMatrix(){
+  const wrap=document.getElementById('matrix-wrap');
+  // 产品表头行1
+  let thead='<thead><tr>'
+    +`<th class="fc0 L" rowspan="2">姓名</th>`
+    +`<th class="fc1" rowspan="2" style="width:70px;">状态</th>`;
+  S.products.forEach((p,pi)=>{
+    thead+=`<th colspan="${p.processes.length}" style="background:${COLORS[pi]}15;border-top:3px solid ${COLORS[pi]};padding:5px 8px;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+        <div style="width:6px;height:6px;border-radius:50%;background:${COLORS[pi]};flex-shrink:0;"></div>
+        ${p.name}</div></th>`;
+  });
+  thead+=`<th rowspan="2">操作</th></tr><tr>`;
+  S.products.forEach((p,pi)=>{
+    p.processes.forEach((proc,pci)=>{
+      thead+=`<th style="min-width:48px;" title="${p.name}-${proc}">
+        <div style="font-size:9px;color:${COLORS[pi]};font-weight:700;">序${pci+1}</div>
+        <div style="font-size:9px;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${proc}</div>
+        <div style="font-size:8px;color:var(--text3);">会检/产量/熟练</div></th>`;
+    });
+  });
+  thead+=`</tr></thead>`;
+
+  let tbody='<tbody>';
+  S.workers.forEach((w,wi)=>{
+    tbody+=`<tr>
+      <td class="fc0 L">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:${w.color}22;border:1.5px solid ${w.color}77;
+            color:${w.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${w.name[0]}</div>
+          <input type="text" value="${w.name}"
+            onchange="S.workers[${wi}].name=this.value;renderAbilityCards();markUnsaved();"
+            style="border:none;background:transparent;font-weight:600;font-size:12px;color:var(--text);width:52px;outline:none;cursor:text;">
+        </div>
+      </td>
+      <td class="fc1">
+        <select onchange="S.workers[${wi}].status=this.value;updateKPI();markUnsaved();" style="font-size:10px;padding:2px 3px;width:62px;">
+          ${['在岗','请假','培训','外出'].map(s=>`<option ${w.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>`;
+    S.products.forEach((p,pi)=>{
+      p.processes.forEach((proc,pci)=>{
+        const sk=getSkill(w,p.id,pci);
+        const on=sk.on;
+        const pref=sk.pref||0;
+        // pref star display
+        const prefLabels=['普通','较熟','熟练','专精'];
+        const prefColors=['#b0bec5','#f57c00','#1565c0','#c0392b'];
+        const prefBg=['#eef2f7','#fff3e0','#e3f2fd','#fff0f0'];
+        const prefStars=['○○○','★○○','★★○','★★★'];
+        const lockKey=`${p.id}_${pci}`;
+        const lockedWid=S.locks[lockKey];
+        const isLockedToMe=lockedWid===w.id;
+        const isLockedToOther=lockedWid&&lockedWid!==w.id;
+        const lockedWorkerName=isLockedToOther?((S.workers.find(x=>x.id===lockedWid)||{}).name||'?'):'';
+        tbody+=`<td class="${isLockedToMe?'lock-cell':''}" style="padding:3px 2px;${isLockedToOther?'opacity:.38;':''}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <!-- 会检切换 -->
+            <div onclick="toggleSkill(${wi},'${p.id}',${pci})"
+              style="width:38px;height:20px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;
+                display:flex;align-items:center;justify-content:center;transition:all .15s;user-select:none;
+                background:${on?COLORS[pi]+'22':'#eef2f7'};
+                color:${on?COLORS[pi]:'#b0bec5'};
+                border:2px solid ${on?(isLockedToMe?'#d4820e':COLORS[pi]+'66'):'#dde5ef'};"
+              title="${w.name} · ${p.name} · ${proc} · 点击切换会检">
+              ${on?'✓':'✕'}
+            </div>
+            <!-- pcs/h -->
+            ${on
+              ?`<input type="number" value="${sk.hourly||0}" min="0" max="999"
+                  style="width:42px;height:20px;text-align:center;font-family:var(--mono);font-size:11px;padding:1px 3px;"
+                  onchange="setHourly(${wi},'${p.id}',${pci},+this.value)"
+                  title="${proc} 小时产量 pcs/h">`
+              :`<div style="width:42px;height:20px;background:var(--surface3);border-radius:4px;border:1px solid var(--border);
+                  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);">—</div>`
+            }
+            <!-- 熟练度 -->
+            ${on
+              ?`<div onclick="setPref(${wi},'${p.id}',${pci},(${pref}+1)%4);renderMatrix();"
+                  style="width:42px;height:18px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:700;
+                    display:flex;align-items:center;justify-content:center;user-select:none;transition:all .15s;
+                    background:${prefBg[pref]};color:${prefColors[pref]};
+                    border:1.5px solid ${prefColors[pref]}44;"
+                  title="点击切换熟练度：${prefLabels[pref]}">
+                  ${prefStars[pref]}
+                </div>`
+              :`<div style="width:42px;height:18px;background:var(--surface3);border-radius:4px;
+                  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--border2);">···</div>`
+            }
+            <!-- 🔒 锁定按钮（仅当该人员会检时显示） -->
+            ${on?`<button class="lock-btn ${isLockedToMe?'locked':''}"
+                onclick="openLockPopup(event,'${p.id}',${pci},'${p.name}','${proc}')"
+                title="${isLockedToMe?'🔒已锁定给'+w.name+'，点击修改':isLockedToOther?'已锁定给'+lockedWorkerName:'点击锁定此工序给指定人员'}">
+                ${isLockedToMe?'🔒':'🔓'}
+              </button>`
+            :`<div style="width:18px;height:18px;"></div>`}
+          </div>
+        </td>`;
+
+      });
+    });
+    tbody+=`<td><button class="btn btn-danger btn-xs" onclick="removeWorker(${wi})">删除</button></td></tr>`;
+  });
+  tbody+='</tbody>';
+  wrap.innerHTML=`<table>${thead}${tbody}</table>`;
+  renderAbilityCards();
+  renderLockSummary();
+  updateKPI();
+}
+
+function toggleSkill(wi,pid,pci){
+  const w=S.workers[wi];
+  if(!w.skills[pid])w.skills[pid]={};
+  const cur=(w.skills[pid][pci]||{}).on||false;
+  w.skills[pid][pci]={on:!cur,hourly:(w.skills[pid][pci]||{}).hourly||0,pref:(w.skills[pid][pci]||{}).pref||0};
+  renderMatrix();markUnsaved();
+}
+
+function setHourly(wi,pid,pci,val){
+  const w=S.workers[wi];
+  if(!w.skills[pid])w.skills[pid]={};
+  if(!w.skills[pid][pci])w.skills[pid][pci]={on:true,hourly:0,pref:0};
+  w.skills[pid][pci].hourly=val;
+  markUnsaved();
+}
+
+function setPref(wi,pid,pci,val){
+  const w=S.workers[wi];
+  if(!w.skills[pid])w.skills[pid]={};
+  if(!w.skills[pid][pci])w.skills[pid][pci]={on:true,hourly:0,pref:0};
+  w.skills[pid][pci].pref=val;
+  markUnsaved();
+}
+
+function addWorker(){
+  const n=prompt('输入新检验员姓名：');if(!n)return;
+  S.workers.push({
+    id:`QC-${String(S.workers.length+1).padStart(3,'0')}`,
+    name:n,status:'培训',
+    color:COLORS[S.workers.length%COLORS.length],skills:{}
+  });
+  renderMatrix();markUnsaved();
+}
+
+function removeWorker(wi){
+  if(!confirm(`确认删除 ${S.workers[wi].name}？`))return;
+  S.workers.splice(wi,1);renderMatrix();markUnsaved();
+}
+
+// ABILITY CARDS
+function renderAbilityCards(){
+  const el=document.getElementById('ability-cards');
+  el.innerHTML=S.workers.map(w=>{
+    const items=[];
+    S.products.forEach((p,pi)=>{
+      p.processes.forEach((proc,pci)=>{
+        const sk=getSkill(w,p.id,pci);
+        if(sk.on&&sk.hourly>0) items.push({prod:p.name,proc,idx:pci+1,hourly:sk.hourly,pref:sk.pref||0,color:COLORS[pi]});
+      });
+    });
+    // 排序：专精>熟练>较熟>普通
+    items.sort((a,b)=>b.pref-a.pref);
+    const prefStars=['','★','★★','★★★'];
+    const prefColors=['#7090b0','#f57c00','#1565c0','#c0392b'];
+    return`<div class="ability-card">
+      <div class="ability-card-hdr">
+        <div class="ability-avatar" style="background:${w.color}22;border:1.5px solid ${w.color}66;color:${w.color};">${w.name[0]}</div>
+        <div>
+          <div class="ability-name">${w.name}</div>
+          <div style="font-size:10px;color:${w.status==='在岗'?'var(--success)':'var(--danger)'};">${w.status} · ${items.length}项工序</div>
+        </div>
+      </div>
+      ${items.length>0
+        ?`<div class="ability-chips">${items.map(it=>`
+          <div class="ability-chip" style="background:${it.color}15;color:${it.color};border:1px solid ${it.color}40;"
+            title="${it.prod}·${it.proc}·${it.hourly}pcs/h·${['普通','较熟','熟练','专精'][it.pref]}">
+            ${it.prod}序${it.idx}
+            ${it.pref>0?`<span style="color:${prefColors[it.pref]};font-size:9px;margin-left:1px;">${prefStars[it.pref]}</span>`:''}
+            <span style="font-family:var(--mono);font-size:9px;opacity:.7;margin-left:2px;">${it.hourly}</span>
+          </div>`).join('')}</div>`
+        :`<div class="ability-empty">暂未配置会检工序</div>`
+      }</div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  PRODUCTS
+// ════════════════════════════════════════════════════════════
+function renderProducts(){
+  document.getElementById('prod-cnt').textContent=S.products.length;
+  document.getElementById('prod-body').innerHTML=S.products.map((p,pi)=>{
+    const custVal=p.customer||inferCustomer(p.model)||'';
+    return`<tr>
+      <td class="L" style="color:var(--text3);font-family:var(--mono);font-size:10px;">${pi+1}</td>
+      <td class="L">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:${COLORS[pi%COLORS.length]};flex-shrink:0;"></div>
+          <input type="text" value="${p.name}" onchange="S.products[${pi}].name=this.value;S.products[${pi}].model=this.value.replace(/[^0-9]/g,'');S.products[${pi}].customer=S.products[${pi}].customer||inferCustomer(S.products[${pi}].model);refreshAll();markUnsaved();" class="iw100" style="font-weight:600;" title="模具号/产品名">
+        </div>
+      </td>
+      <td>
+        <select onchange="S.products[${pi}].customer=this.value;renderDemand();markUnsaved();" style="font-size:11px;padding:2px 3px;max-width:110px;">
+          <option value="">—未知—</option>
+          ${getAllCustomers().map(c=>`<option ${custVal===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select onchange="S.products[${pi}].difficulty=this.value;markUnsaved();" style="font-size:11px;padding:2px 3px;">
+          ${['低','中','高'].map(d=>`<option ${p.difficulty===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <span class="badge bb" style="cursor:pointer;" onclick="document.getElementById('proc-sel').value='${p.id}';renderProcEditor();ST('t-products');">
+          ${p.processes.length}道 → 编辑
+        </span>
+      </td>
+      <td><button class="btn btn-danger btn-xs" onclick="removeProduct(${pi})">删除</button></td>
+    </tr>`;
+  }).join('');
+  const sel=document.getElementById('proc-sel');
+  sel.innerHTML=`<option value="">-- 选择产品 --</option>`+S.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  initCDProdSel();
+}
+
+function addProduct(){
+  const moldNo=prompt('输入模具号（如：2200）：');
+  if(!moldNo||!moldNo.trim())return;
+  const mold=moldNo.trim().replace(/[^0-9]/g,'');
+  if(!mold){showToast('模具号须为数字','error');return;}
+  const pid='P'+mold;
+  if(S.products.find(p=>p.id===pid)){showToast('该模具号已存在','error');return;}
+  const cust=inferCustomer(mold)||'';
+  S.products.push({id:pid,name:`${mold}#`,model:mold,difficulty:'中',customer:cust,processes:['序1检验','序2检验','序3检验']});
+  S.demands.push({pid,stock:0,demand:0,pending:0,defectRate:1.5,priority:'中',deadlineDate:today(),deadlineTime:'18:00',customer:cust});
+  S.procDone[pid]=[0,0,0];
+  refreshAll();initCDProdSel();markUnsaved();
+  showToast(`✅ 已添加 ${mold}#${cust?' · '+cust:''}`);
+}
+
+function removeProduct(pi){
+  if(!confirm(`确认删除 ${S.products[pi].name}？`))return;
+  const pid=S.products[pi].id;
+  S.products.splice(pi,1);
+  S.demands=S.demands.filter(d=>d.pid!==pid);
+  delete S.procDone[pid];
+  S.workers.forEach(w=>delete w.skills[pid]);
+  refreshAll();markUnsaved();
+}
+
+function refreshAll(){renderProducts();renderMatrix();renderDemand();renderProcStatus();}
+
+function renderProcEditor(){
+  const pid=document.getElementById('proc-sel').value;
+  if(!pid){document.getElementById('proc-editor').innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:14px;">请选择产品</div>';return;}
+  const p=S.products.find(x=>x.id===pid);if(!p)return;
+  const pi=S.products.indexOf(p);
+  document.getElementById('proc-editor').innerHTML=`
+    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:7px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${COLORS[pi]};"></div>
+      ${p.name} · ${p.processes.length}道工序
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      ${p.processes.map((proc,pci)=>`
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${COLORS[pi]}18;border:1px solid ${COLORS[pi]}55;
+            color:${COLORS[pi]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${pci+1}</div>
+          <input type="text" value="${proc}"
+            onchange="S.products[${pi}].processes[${pci}]=this.value;renderMatrix();renderProcStatus();markUnsaved();"
+            class="iw120" style="font-size:12px;">
+          <button class="btn btn-danger btn-xs" onclick="removeProc('${pid}',${pci})">删除</button>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="addProc('${pid}')">➕ 添加工序</button>
+    </div>`;
+}
+
+function addProc(pid){
+  const p=S.products.find(x=>x.id===pid);if(!p)return;
+  const n=prompt('输入新工序名称：');if(!n)return;
+  p.processes.push(n);
+  if(!S.procDone[pid])S.procDone[pid]=[];
+  S.procDone[pid].push(0);
+  renderProcEditor();renderMatrix();renderProcStatus();markUnsaved();
+}
+
+function removeProc(pid,pci){
+  const p=S.products.find(x=>x.id===pid);if(!p)return;
+  if(p.processes.length<=1){alert('至少保留1道工序');return;}
+  p.processes.splice(pci,1);
+  if(S.procDone[pid])S.procDone[pid].splice(pci,1);
+  S.workers.forEach(w=>{
+    if(w.skills[pid]){
+      const ns={};
+      Object.entries(w.skills[pid]).forEach(([k,v])=>{
+        const ki=parseInt(k);
+        if(ki<pci)ns[ki]=v;
+        else if(ki>pci)ns[ki-1]=v;
+      });
+      w.skills[pid]=ns;
+    }
+  });
+  renderProcEditor();renderMatrix();renderProcStatus();markUnsaved();
+}
+
+// ════════════════════════════════════════════════════════════
+//  DEMAND
+// ════════════════════════════════════════════════════════════
+function renderDemand(){
+  document.getElementById('dem-cnt').textContent=S.products.length;
+  document.getElementById('dem-body').innerHTML=S.demands.map((d,di)=>{
+    const p=S.products.find(x=>x.id===d.pid);if(!p)return'';
+    const pi=S.products.indexOf(p);
+    const defEst=Math.round((d.pending||0)*(d.defectRate||0)/100);
+    const net=getNet(d);
+    // 客户：优先用demand上记录的，否则从model推断
+    const cust=d.customer||inferCustomer(p.model)||'';
+    return`<tr style="${d.priority==='紧急'?'background:rgba(192,57,43,.03)':d.priority==='高'?'background:rgba(230,126,34,.02)':''}">
+      <td class="L" style="color:var(--text3);font-family:var(--mono);font-size:10px;">${di+1}</td>
+      <td class="L">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:${COLORS[pi%COLORS.length]};flex-shrink:0;"></div>
+          <div style="font-weight:600;font-size:12px;">${p.name}</div>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:3px;">
+          <select style="font-size:11px;padding:2px 3px;max-width:100px;"
+            onchange="S.demands[${di}].customer=this.value;markUnsaved();">
+            <option value="">—未知—</option>
+            ${getAllCustomers().map(c=>`<option ${cust===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </td>
+      <td><input type="number" value="${d.stock}" min="0" onchange="S.demands[${di}].stock=+this.value;recalcRow(${di});markUnsaved();" class="iw60"></td>
+      <td><input type="number" value="${d.demand}" min="0" onchange="S.demands[${di}].demand=+this.value;recalcRow(${di});markUnsaved();" class="iw60"></td>
+      <td><input type="number" value="${d.pending}" min="0" onchange="S.demands[${di}].pending=+this.value;recalcRow(${di});markUnsaved();" class="iw60"></td>
+      <td><input type="number" value="${d.defectRate}" step="0.1" min="0" max="100" onchange="S.demands[${di}].defectRate=+this.value;recalcRow(${di});markUnsaved();" class="iw50"></td>
+      <td style="font-family:var(--mono);color:var(--accent3);" id="dfest-${di}">${defEst}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--accent);font-size:13px;" id="dnet-${di}">${net}</td>
+      <td><select onchange="S.demands[${di}].priority=this.value;renderDemand();markUnsaved();" style="font-size:11px;padding:2px 3px;">
+        ${['紧急','高','中','低'].map(v=>`<option ${d.priority===v?'selected':''}>${v}</option>`).join('')}
+      </select></td>
+      <td><input type="date" value="${d.deadlineDate}" onchange="S.demands[${di}].deadlineDate=this.value;markUnsaved();" class="iw100"></td>
+      <td><input type="time" value="${d.deadlineTime}" onchange="S.demands[${di}].deadlineTime=this.value;markUnsaved();" class="iw80"></td>
+    </tr>`;
+  }).join('');
+  updateFooter();
+}
+
+function recalcRow(di){
+  const d=S.demands[di];
+  const def=Math.round((d.pending||0)*(d.defectRate||0)/100);
+  const net=getNet(d);
+  const e1=document.getElementById(`dfest-${di}`);
+  const e2=document.getElementById(`dnet-${di}`);
+  if(e1)e1.textContent=def;
+  if(e2)e2.textContent=net;
+  updateFooter();updateKPI();renderGapWarning();
+}
+
+function updateFooter(){
+  let ts=0,td=0,tp=0,tdf=0,tn=0;
+  S.demands.forEach(d=>{
+    ts+=d.stock||0;td+=d.demand||0;tp+=d.pending||0;
+    tdf+=Math.round((d.pending||0)*(d.defectRate||0)/100);
+    tn+=getNet(d);
+  });
+  [['ft-stock',ts],['ft-demand',td],['ft-pending',tp],['ft-defect',tdf],['ft-net',tn]].forEach(([id,v])=>{
+    const el=document.getElementById(id);if(el)el.textContent=v.toLocaleString();
+  });
+}
+
+function clearDemand(){
+  S.demands.forEach(d=>{d.stock=0;d.demand=0;d.pending=0;});
+  renderDemand();updateKPI();markUnsaved();
+}
+
+function calcAndAssign(){updateFooter();updateKPI();autoAssign();ST('t-overview');}
+
+// ════════════════════════════════════════════════════════════
+//  PROCESS STATUS
+// ════════════════════════════════════════════════════════════
+function renderProcStatus(){
+  const maxProc=Math.max(...S.products.map(p=>p.processes.length),1);
+  document.getElementById('proc-status-head').innerHTML=`
+    <th class="L">产品</th>
+    ${Array.from({length:maxProc},(_,i)=>`<th>序${i+1}<br><span style="font-size:9px;color:var(--text3);">已完成</span></th>`).join('')}
+    <th>总待检</th><th>瓶颈</th><th>可发货</th><th>缺口</th>`;
+
+  document.getElementById('proc-status-body').innerHTML=S.products.map((p,pi)=>{
+    const d=S.demands.find(x=>x.pid===p.id)||{pending:0,demand:0,stock:0};
+    const done=(S.procDone[p.id]||Array(p.processes.length).fill(0)).slice(0,p.processes.length);
+    const minDone=Math.min(...done);
+    const available=minDone+(d.stock||0);
+    const gap=Math.max(0,(d.demand||0)-available);
+    const botIdx=done.indexOf(minDone);
+    return`<tr>
+      <td class="L">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:${COLORS[pi]};flex-shrink:0;"></div>
+          <div>
+            <div style="font-weight:600;font-size:12px;">${p.name}</div>
+            <div style="font-size:9px;color:var(--text3);">${p.processes.slice(0,5).join(' · ')}</div>
+          </div>
+        </div>
+      </td>
+      ${Array.from({length:maxProc},(_,pci)=>{
+        if(pci<p.processes.length){
+          const v=done[pci]||0;
+          const isBot=pci===botIdx&&(d.demand||0)>0;
+          return`<td>
+            <input type="number" value="${v}" min="0" class="iw60"
+              onchange="if(!S.procDone['${p.id}'])S.procDone['${p.id}']=Array(${p.processes.length}).fill(0);
+                S.procDone['${p.id}'][${pci}]=+this.value;renderProcStatus();renderGapWarning();markUnsaved();"
+              style="${isBot?'border-color:var(--danger);background:rgba(192,57,43,.05);':''}"
+              title="${p.processes[pci]}">
+            ${isBot?`<div style="font-size:9px;color:var(--danger);">⚠瓶颈</div>`:''}
+          </td>`;
+        }
+        return`<td style="color:var(--text3);">—</td>`;
+      }).join('')}
+      <td style="font-family:var(--mono);">${d.pending||0}</td>
+      <td>${(d.demand||0)>0&&p.processes.length>0
+        ?`<span class="badge br" style="font-size:9px;">${p.processes[botIdx]||`序${botIdx+1}`}</span>`:'—'}</td>
+      <td style="font-family:var(--mono);color:var(--success);font-weight:700;">${available}</td>
+      <td>${(d.demand||0)>0
+        ?(gap>0?`<span class="badge br">缺 ${gap}</span>`:`<span class="badge bg">✓</span>`):'—'}</td>
+    </tr>`;
+  }).join('');
+  renderProcGapAdvice();
+}
+
+function renderProcGapAdvice(){
+  const el=document.getElementById('proc-gap-advice');
+  let html='';
+  S.products.forEach((p,pi)=>{
+    const d=S.demands.find(x=>x.pid===p.id)||{demand:0,stock:0};
+    const done=(S.procDone[p.id]||Array(p.processes.length).fill(0)).slice(0,p.processes.length);
+    const minDone=Math.min(...done);
+    const available=minDone+(d.stock||0);
+    const gap=Math.max(0,(d.demand||0)-available);
+    if(gap<=0||(d.demand||0)<=0)return;
+    const botIdx=done.indexOf(minDone);
+    const botName=p.processes[botIdx]||`序${botIdx+1}`;
+    const capable=S.workers.filter(w=>w.status==='在岗'&&getSkill(w,p.id,botIdx).on&&(getSkill(w,p.id,botIdx).hourly||0)>0)
+      .sort((a,b)=>getSkill(b,p.id,botIdx).hourly-getSkill(a,p.id,botIdx).hourly);
+    const best=capable[0];
+    const bestH=best?getSkill(best,p.id,botIdx).hourly:0;
+    html+=`<div class="alert al-warn" style="margin-top:8px;">
+      ⚠ <strong>${p.name}</strong> 发货缺口 <span style="color:var(--danger);font-weight:700;">${gap} pcs</span>，
+      瓶颈「${botName}」。建议：<b>${capable.slice(0,2).map(w=>`${w.name}(${getSkill(w,p.id,botIdx).hourly}pcs/h)`).join('、')||'无合适人员'}</b>
+      ${bestH>0?`，约需 <b>${(gap/bestH).toFixed(1)}h</b>。`:'，请先配置技能矩阵。'}
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════════════
+//  KPI
+// ════════════════════════════════════════════════════════════
+function updateKPI(){
+  const active=S.workers.filter(w=>w.status==='在岗');
+  document.getElementById('k-staff').textContent=active.length;
+  document.getElementById('k-staff-s').textContent=`共${S.workers.length}人`;
+  let totalNet=0;
+  S.demands.forEach(d=>totalNet+=getNet(d));
+  document.getElementById('k-pending').textContent=totalNet.toLocaleString();
+  let gapCount=0;
+  S.products.forEach(p=>{
+    const d=S.demands.find(x=>x.pid===p.id)||{demand:0,stock:0};
+    const done=(S.procDone[p.id]||[]).slice(0,p.processes.length);
+    const minDone=done.length?Math.min(...done):0;
+    if((d.demand||0)>0&&(d.demand||0)>(minDone+(d.stock||0)))gapCount++;
+  });
+  document.getElementById('k-gap').textContent=gapCount;
+}
+
+// ════════════════════════════════════════════════════════════
+//  GAP WARNING
+// ════════════════════════════════════════════════════════════
+function renderGapWarning(){
+  const el=document.getElementById('ov-gap');
+  let html='';let hasWarn=false;
+  S.products.forEach((p,pi)=>{
+    const d=S.demands.find(x=>x.pid===p.id)||{demand:0,stock:0};
+    const done=(S.procDone[p.id]||Array(p.processes.length).fill(0)).slice(0,p.processes.length);
+    const minDone=done.length?Math.min(...done):0;
+    const available=minDone+(d.stock||0);
+    const gap=Math.max(0,(d.demand||0)-available);
+    if(gap>0&&(d.demand||0)>0){
+      hasWarn=true;
+      const botIdx=done.indexOf(minDone);
+      const botName=p.processes[botIdx]||`序${botIdx+1}`;
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <div style="width:7px;height:7px;border-radius:50%;background:${COLORS[pi]};flex-shrink:0;"></div>
+          <span style="font-weight:600;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+          <span class="badge bgr" style="font-size:9px;flex-shrink:0;">${botName}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+          <span style="font-size:10px;color:var(--text3);">可发${available}</span>
+          <span class="badge br">缺${gap}</span>
+        </div>
+      </div>`;
+    }
+  });
+  el.innerHTML=hasWarn
+    ?`<div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:6px;">发货缺口产品</div>`+html
+    :`<div style="text-align:center;color:var(--success);padding:18px;font-size:12px;">✅ 所有产品均满足发货需求</div>`;
+  updateKPI();
+}
+
+// ════════════════════════════════════════════════════════════
+//  AUTO ASSIGN
+// ════════════════════════════════════════════════════════════
+function buildTasks(){
+  const prioOrder={'紧急':0,'高':1,'中':2,'低':3};
+  const tasks=[];
+  S.demands.filter(d=>(d.pending||0)>0).forEach(d=>{
+    const p=S.products.find(x=>x.id===d.pid);if(!p)return;
+    const net=getNet(d);if(net<=0)return;
+    const pi=S.products.indexOf(p);
+    const done=S.procDone[p.id]||Array(p.processes.length).fill(0);
+    p.processes.forEach((proc,pci)=>{
+      const needed=Math.max(0,net-(done[pci]||0));
+      if(needed>0) tasks.push({
+        pid:p.id,prod:p.name,procIdx:pci,procName:proc,qty:needed,
+        priority:d.priority,prodColor:COLORS[pi],pi,remaining:needed,original:needed
+      });
+    });
+  });
+  tasks.sort((a,b)=>(prioOrder[a.priority]||3)-(prioOrder[b.priority]||3));
+  return tasks;
+}
+
+function assignTasks(tasks,workers,eh){
+  const assign=workers.map(w=>({worker:w,items:[],totalH:0,output:0}));
+
+  tasks.forEach(task=>{
+    const lockKey=`${task.pid}_${task.procIdx}`;
+    const lockedWid=S.locks[lockKey];
+
+    // ── 锁定处理：强制让锁定人员优先消化此工序 ──
+    if(lockedWid){
+      const lockedA=assign.find(a=>a.worker.id===lockedWid&&a.worker.status==='在岗');
+      if(lockedA&&task.remaining>0){
+        const sk=getSkill(lockedA.worker,task.pid,task.procIdx);
+        if(sk.on&&(sk.hourly||0)>0&&lockedA.totalH<eh){
+          const avail=(eh-lockedA.totalH)*(sk.hourly||0);
+          const take=Math.min(task.remaining,avail);
+          if(take>0){
+            lockedA.items.push({...task,qty:Math.round(take),hours:take/sk.hourly,rate:sk.hourly,pref:sk.pref||0,locked:true});
+            lockedA.totalH+=take/sk.hourly;
+            lockedA.output+=Math.round(take);
+            task.remaining-=take;
+          }
+        }
+      }
+      // 锁定工序剩余量不再分给其他人（强制专属）
+      return;
+    }
+
+    // ── 常规两阶段分配（无锁定） ──
+    const eligible=assign.filter(a=>{
+      const sk=getSkill(a.worker,task.pid,task.procIdx);
+      return sk.on&&(sk.hourly||0)>0&&a.totalH<eh;
+    }).sort((a,b)=>{
+      const pa=getSkill(a.worker,task.pid,task.procIdx).pref||0;
+      const pb=getSkill(b.worker,task.pid,task.procIdx).pref||0;
+      if(pb!==pa) return pb-pa;
+      return a.totalH-b.totalH;
+    });
+
+    const expertThreshold=2;
+    const experts=eligible.filter(a=>(getSkill(a.worker,task.pid,task.procIdx).pref||0)>=expertThreshold);
+    const fillWorkers=eligible.filter(a=>(getSkill(a.worker,task.pid,task.procIdx).pref||0)<expertThreshold);
+
+    const assignGroup=(group)=>{
+      group.forEach(a=>{
+        if(task.remaining<=0)return;
+        const sk=getSkill(a.worker,task.pid,task.procIdx);
+        const avail=(eh-a.totalH)*(sk.hourly||0);
+        const take=Math.min(task.remaining,avail);
+        if(take>0){
+          a.items.push({...task,qty:Math.round(take),hours:take/sk.hourly,rate:sk.hourly,pref:sk.pref||0});
+          a.totalH+=take/sk.hourly;
+          a.output+=Math.round(take);
+          task.remaining-=take;
+        }
+      });
+    };
+
+    assignGroup(experts);
+    if(task.remaining>0) assignGroup(fillWorkers);
+  });
+  return assign;
+}
+
+function autoAssign(){
+  const active=S.workers.filter(w=>w.status==='在岗');
+  if(!active.length){
+    document.getElementById('ov-alerts').innerHTML=`<div class="alert al-danger">⚠ 没有在岗人员</div>`;
+    return;
+  }
+  const eh=effH();
+  const tasks=buildTasks();
+  const assign=assignTasks(tasks,active,eh);
+  S.lastAssign=assign;
+
+  // Compute plan total
+  const planTotal=assign.reduce((s,a)=>s+a.output,0);
+  document.getElementById('k-plan').textContent=planTotal.toLocaleString();
+
+  renderOvTable(assign,eh);
+  renderGantt(assign,eh,'ov-gantt');
+  updateETA(assign,eh);
+  updateAchieveKPI(assign,eh);
+  renderGapWarning();
+
+  const uncovered=tasks.filter(t=>t.remaining>0);
+  const lockWarnings=[];
+  Object.entries(S.locks).forEach(([key,wid])=>{
+    const w=S.workers.find(x=>x.id===wid);
+    if(!w||w.status!=='在岗') lockWarnings.push(`🔒锁定人员「${(w||{}).name||wid}」不在岗，工序可能无人执行`);
+  });
+  let alertHtml='';
+  if(lockWarnings.length) alertHtml+=`<div class="alert al-warn">⚠ ${lockWarnings.join('；')}</div>`;
+  if(uncovered.length) alertHtml+=`<div class="alert al-warn">⚠ 以下工序无合适人员：${uncovered.map(t=>`<b>${t.prod}</b>${t.procName}(剩${t.remaining}pcs)`).join('、')}</div>`;
+  if(!alertHtml) alertHtml=`<div class="alert al-success">✅ 今日任务已全部分配${Object.keys(S.locks).length?` · 🔒${Object.keys(S.locks).length}项强制指派`:''}</div>`;
+  document.getElementById('ov-alerts').innerHTML=alertHtml;
+
+  // Reset actual done for today
+  S.actualDone={};
+  renderProgress();
+  renderAchConfirmBar();
+  markUnsaved();
+}
+
+// ════════════════════════════════════════════════════════════
+//  ACHIEVE KPI
+// ════════════════════════════════════════════════════════════
+function updateAchieveKPI(assign,eh){
+  const now=new Date();
+  const shiftStartMin=t2m(S.shift.start);
+  const shiftEndMin=t2m(S.shift.end);
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+  const nowMin=now.getHours()*60+now.getMinutes();
+
+  // Elapsed effective hours
+  let elapsedMin=Math.max(0,nowMin-shiftStartMin);
+  if(nowMin>=lunchE) elapsedMin-=(lunchE-lunchS);
+  if(nowMin>shiftEndMin) elapsedMin=eh*60;
+  elapsedMin=Math.max(0,Math.min(elapsedMin,eh*60));
+  const elapsedH=elapsedMin/60;
+
+  const planTotal=assign.reduce((s,a)=>s+a.output,0);
+  // Expected completed by now proportionally
+  const expectedNow=Math.round(planTotal*elapsedH/Math.max(eh,0.01));
+  // Actual done (sum of all)
+  const actualTotal=assign.reduce((s,a)=>{
+    return s+a.items.reduce((ss,it)=>{
+      const key=`${S.workers.indexOf(a.worker)}_${it.pid}_${it.procIdx}`;
+      return ss+(S.actualDone[key]||0);
+    },0);
+  },0);
+
+  const pct=planTotal>0?Math.round(actualTotal/planTotal*100):0;
+  const achEl=document.getElementById('k-achieve');
+  const achSub=document.getElementById('k-achieve-sub');
+
+  let cls,label;
+  if(elapsedH<0.1){
+    cls='ach-risk';label='班次未开始';
+  } else if(actualTotal>=expectedNow*0.95){
+    cls='ach-yes';label='✓ 当前达产';
+  } else if(actualTotal>=expectedNow*0.80){
+    cls='ach-risk';label='⚡ 接近达产';
+  } else {
+    cls='ach-no';label='✗ 当前未达产';
+  }
+  achEl.innerHTML=`<span class="achieve ${cls}">${label}</span>`;
+  achSub.textContent=`实际${actualTotal} / 计划${planTotal}(${pct}%)`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  OVERVIEW TABLE
+// ════════════════════════════════════════════════════════════
+function renderOvTable(assign,eh){
+  const combos=[];
+  assign.forEach(a=>a.items.forEach(it=>{
+    const key=`${it.pid}_${it.procIdx}`;
+    if(!combos.find(c=>c.key===key))
+      combos.push({key,pid:it.pid,pci:it.procIdx,name:it.prod,procName:it.procName,color:it.prodColor});
+  }));
+  const shiftStartMin=t2m(S.shift.start);
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+  const lunchLen=(lunchE-lunchS)/60;
+
+  let html=`<table><thead><tr>
+    <th class="L">检验员</th>
+    ${combos.map(c=>`<th style="font-size:10px;"><div style="color:${c.color};font-weight:700;">${c.name}</div><div style="font-size:9px;color:var(--text3);">${c.procName}</div></th>`).join('')}
+    <th>计划产量</th><th>工时</th><th>利用率</th><th>完成时间</th>
+  </tr></thead><tbody>`;
+
+  assign.forEach(a=>{
+    const util=Math.min(100,Math.round(a.totalH/eh*100));
+    const fillCls=util>=90?'pred':util>=70?'pgreen':'pyellow';
+    const etaH=a.totalH+(a.totalH>(lunchS-shiftStartMin)/60?lunchLen:0);
+    const etaMin=shiftStartMin+Math.round(etaH*60);
+    const over=etaMin>t2m(S.shift.end);
+    html+=`<tr>
+      <td class="L">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${a.worker.color}22;border:1.5px solid ${a.worker.color}66;
+            color:${a.worker.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">${a.worker.name[0]}</div>
+          <span style="font-weight:600;font-size:12px;">${a.worker.name}</span>
+        </div>
+      </td>
+      ${combos.map(c=>{
+        const it=a.items.find(i=>i.pid===c.pid&&i.procIdx===c.pci);
+        const prefLabels=['','较熟','熟练','专精'];
+        const prefColors=['','#f57c00','#1565c0','#c0392b'];
+        const prefStars=['','★','★★','★★★'];
+        return`<td>${it
+          ?`<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:${c.color};">${it.qty}</div>
+             <div style="font-size:9px;color:var(--text3);">${it.rate}pcs/h</div>
+             ${(it.pref||0)>0?`<div style="font-size:9px;color:${prefColors[it.pref]};font-weight:700;">${prefStars[it.pref]}${prefLabels[it.pref]}</div>`:''}
+             ${it.locked?`<div class="lock-badge">🔒强制指派</div>`:''}`
+          :'<span style="color:var(--text3);">—</span>'
+        }</td>`;
+      }).join('')}
+      <td style="font-family:var(--mono);color:var(--accent);font-weight:700;">${a.output}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${a.totalH.toFixed(1)}h</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div class="pbar" style="width:52px;"><div class="pfill ${fillCls}" style="width:${util}%;"></div></div>
+          <span style="font-family:var(--mono);font-size:10px;">${util}%</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:11px;color:${over?'var(--danger)':'var(--success)'};">
+        ${m2t(Math.min(etaMin,1439))}${over?' +1':''}
+        <span class="badge ${over?'br':'bg'}" style="font-size:9px;margin-left:2px;">${over?'超班':'✓'}</span>
+      </td>
+    </tr>`;
+  });
+
+  // Total row
+  const totByCombo={};
+  combos.forEach(c=>{totByCombo[c.key]=assign.reduce((s,a)=>{const it=a.items.find(i=>i.pid===c.pid&&i.procIdx===c.pci);return s+(it?it.qty:0);},0);});
+  html+=`<tr style="background:var(--surface3);font-weight:700;">
+    <td class="L" style="font-size:12px;color:var(--text2);padding-left:11px;">合计</td>
+    ${combos.map(c=>`<td style="font-family:var(--mono);color:${c.color};font-weight:700;">${totByCombo[c.key]}</td>`).join('')}
+    <td style="font-family:var(--mono);color:var(--accent);font-weight:700;">${assign.reduce((s,a)=>s+a.output,0)}</td>
+    <td colspan="3">—</td>
+  </tr>`;
+  html+=`</tbody></table>`;
+  document.getElementById('ov-table-wrap').innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════════════
+//  GANTT
+// ════════════════════════════════════════════════════════════
+function renderGantt(assign,eh,containerId){
+  const shiftStartMin=t2m(S.shift.start);
+  const totalMin=eh*60+(t2m(S.shift.lunchE)-t2m(S.shift.lunchS));
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+  const ticks=5;
+  const tickArr=Array.from({length:ticks+1},(_,i)=>m2t(shiftStartMin+Math.round(totalMin/ticks*i)));
+  let html=`<div class="gantt-wrap">
+    <div class="gantt-tick-row">
+      <div class="gantt-spacer"></div>
+      <div class="gantt-ticks">${tickArr.map(t=>`<div class="gantt-tick">${t}</div>`).join('')}</div>
+      <div class="gantt-lbl"></div>
+    </div>`;
+  assign.forEach(a=>{
+    html+=`<div class="gantt-row">
+      <div class="gantt-name">${a.worker.name}</div>
+      <div class="gantt-bar">`;
+    const lL=((lunchS-shiftStartMin)/totalMin*100).toFixed(1);
+    const lW=((lunchE-lunchS)/totalMin*100).toFixed(1);
+    html+=`<div class="gantt-seg" style="left:${lL}%;width:${lW}%;background:#ccc;opacity:.4;"><span>午休</span></div>`;
+    let cur=shiftStartMin;
+    a.items.forEach(item=>{
+      if(cur>=lunchS&&cur<lunchE)cur=lunchE;
+      const left=((cur-shiftStartMin)/totalMin*100).toFixed(1);
+      const w=(item.hours*60/totalMin*100).toFixed(1);
+      html+=`<div class="gantt-seg" title="${item.prod} 序${item.procIdx+1}:${item.procName} ${item.qty}pcs"
+        style="left:${left}%;width:${w}%;background:${item.prodColor};opacity:.82;">
+        <span>${item.prod} 序${item.procIdx+1}</span></div>`;
+      cur+=item.hours*60;
+      if(cur>lunchS&&cur<lunchE)cur=lunchE;
+    });
+    html+=`</div><div class="gantt-lbl">${a.totalH.toFixed(1)}h</div></div>`;
+  });
+  html+=`</div>`;
+  document.getElementById(containerId).innerHTML=html;
+}
+
+function updateETA(assign,eh){
+  if(!assign||!assign.length)return;
+  const shiftStartMin=t2m(S.shift.start);
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+  const lunchLen=(lunchE-lunchS)/60;
+  let maxH=Math.max(...assign.map(a=>a.totalH));
+  let etaH=maxH+(maxH>(lunchS-shiftStartMin)/60?lunchLen:0);
+  const etaMin=shiftStartMin+Math.round(etaH*60);
+  const over=etaMin>t2m(S.shift.end);
+  document.getElementById('k-eta').textContent=m2t(Math.min(etaMin,1439));
+  document.getElementById('k-eta-d').textContent=over?'明日(需加班)':'今日';
+}
+
+// ════════════════════════════════════════════════════════════
+//  PROGRESS (per-worker)
+// ════════════════════════════════════════════════════════════
+function renderProgress(){
+  if(!S.lastAssign){
+    document.getElementById('progress-grid').innerHTML=`<div style="text-align:center;color:var(--text3);padding:24px;font-size:12px;grid-column:1/-1;">请先完成「概览排产」的分配</div>`;
+    return;
+  }
+  const assign=S.lastAssign;
+  const eh=effH();
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const shiftStartMin=t2m(S.shift.start);
+  const shiftEndMin=t2m(S.shift.end);
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+
+  // Elapsed effective minutes
+  let elapsedMin=Math.max(0,nowMin-shiftStartMin);
+  if(nowMin>=lunchE) elapsedMin-=(lunchE-lunchS);
+  if(nowMin>shiftEndMin) elapsedMin=eh*60;
+  elapsedMin=Math.max(0,Math.min(elapsedMin,eh*60));
+  const elapsedH=elapsedMin/60;
+
+  // Grid
+  document.getElementById('progress-grid').innerHTML=assign.map((a,ai)=>{
+    const planTotal=a.output;
+    let actualTotal=0;
+    const wi=S.workers.indexOf(a.worker);
+
+    const taskRows=a.items.map((it,ti)=>{
+      const key=`${wi}_${it.pid}_${it.procIdx}`;
+      const actual=S.actualDone[key]||0;
+      actualTotal+=actual;
+      const taskPct=it.qty>0?Math.min(100,Math.round(actual/it.qty*100)):0;
+      const fillCls=taskPct>=100?'pgreen':taskPct>=70?'pblue':'pyellow';
+      return`<div class="wp-task-row">
+        <div class="wp-task-dot" style="background:${it.prodColor};"></div>
+        <div class="wp-task-name" title="${it.prod} · ${it.procName}">${it.prod} 序${it.procIdx+1}</div>
+        <div class="wp-task-bar"><div class="wp-task-fill ${fillCls}" style="width:${taskPct}%;"></div></div>
+        <div class="wp-task-val">
+          <input type="number" value="${actual}" min="0" max="${it.qty*2}"
+            style="width:46px;height:20px;text-align:center;font-family:var(--mono);font-size:10px;padding:1px 2px;"
+            onchange="S.actualDone['${key}']=+this.value;updateAchieveKPI(S.lastAssign,${eh});renderAchieveTable();markUnsaved();"
+            title="输入实际已检数量">
+          <span style="color:var(--text3);">/${it.qty}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    const overallPct=planTotal>0?Math.min(100,Math.round(actualTotal/planTotal*100)):0;
+    // Expected at current time
+    const expectedNow=Math.round(planTotal*elapsedH/Math.max(eh,0.01));
+    let achCls,achLabel;
+    if(elapsedH<0.1){achCls='ach-risk';achLabel='未开始';}
+    else if(actualTotal>=expectedNow*0.95){achCls='ach-yes';achLabel='✓ 达产';}
+    else if(actualTotal>=expectedNow*0.80){achCls='ach-risk';achLabel='⚡ 接近';}
+    else{achCls='ach-no';achLabel='✗ 滞后';}
+
+    const fillCls=overallPct>=100?'pgreen':overallPct>=70?'pblue':'pyellow';
+    return`<div class="wp-card">
+      <div class="wp-hdr">
+        <div class="wp-avatar">
+          <div class="wp-dot" style="background:${a.worker.color}22;border:2px solid ${a.worker.color}66;color:${a.worker.color};">${a.worker.name[0]}</div>
+          <div><div class="wp-name">${a.worker.name}</div><div class="wp-id">${a.worker.id}</div></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="wp-pct-big" style="color:${overallPct>=100?'var(--success)':overallPct>=70?'var(--accent)':'var(--warn)'};">${overallPct}%</div>
+          <span class="achieve ${achCls}" style="font-size:10px;padding:2px 8px;">${achLabel}</span>
+        </div>
+      </div>
+      <div class="wp-meta">
+        实际 <b>${actualTotal}</b> / 计划 <b>${planTotal}</b> pcs
+        · 当前应完成 <b>${expectedNow}</b> pcs
+      </div>
+      <div class="wp-bar-wrap"><div class="wp-bar-fill ${fillCls}" style="width:${overallPct}%;"></div></div>
+      <div class="wp-tasks">${taskRows}</div>
+    </div>`;
+  }).join('');
+
+  renderAchieveTable();
+}
+
+function updateProgressLive(){
+  // Only update achieve kpi & table without full re-render
+  if(!S.lastAssign)return;
+  updateAchieveKPI(S.lastAssign,effH());
+}
+
+function renderAchieveTable(){
+  if(!S.lastAssign)return;
+  const assign=S.lastAssign;
+  const eh=effH();
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const shiftStartMin=t2m(S.shift.start);
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+  let elapsedMin=Math.max(0,nowMin-shiftStartMin);
+  if(nowMin>=lunchE)elapsedMin-=(lunchE-lunchS);
+  elapsedMin=Math.max(0,Math.min(elapsedMin,eh*60));
+  const elapsedH=elapsedMin/60;
+
+  let totPlan=0,totActual=0;
+  document.getElementById('achieve-body').innerHTML=assign.map(a=>{
+    const wi=S.workers.indexOf(a.worker);
+    const plan=a.output;
+    const actual=a.items.reduce((s,it)=>{
+      const key=`${wi}_${it.pid}_${it.procIdx}`;
+      return s+(S.actualDone[key]||0);
+    },0);
+    totPlan+=plan;totActual+=actual;
+    const pct=plan>0?Math.min(100,Math.round(actual/plan*100)):0;
+    const expectedNow=Math.round(plan*elapsedH/Math.max(eh,0.01));
+    // Projected full-day
+    const projected=elapsedH>0?Math.round(actual/elapsedH*eh):plan;
+    let achCls,achLabel;
+    if(elapsedH<0.1){achCls='ach-risk';achLabel='未开始';}
+    else if(actual>=expectedNow*0.95){achCls='ach-yes';achLabel='✓ 达产';}
+    else if(actual>=expectedNow*0.80){achCls='ach-risk';achLabel='⚡ 接近';}
+    else{achCls='ach-no';achLabel='✗ 滞后';}
+    const projCls=projected>=plan?'ach-yes':projected>=plan*0.9?'ach-risk':'ach-no';
+    const fillCls=pct>=100?'pgreen':pct>=70?'pblue':'pyellow';
+    return`<tr>
+      <td class="L">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:20px;height:20px;border-radius:50%;background:${a.worker.color}22;border:1.5px solid ${a.worker.color}66;
+            color:${a.worker.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;">${a.worker.name[0]}</div>
+          <span style="font-weight:600;">${a.worker.name}</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);">${plan}</td>
+      <td style="font-family:var(--mono);font-weight:700;">${actual}</td>
+      <td style="font-family:var(--mono);">${pct}%</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div class="pbar" style="width:70px;"><div class="pfill ${fillCls}" style="width:${pct}%;"></div></div>
+        </div>
+      </td>
+      <td><span class="achieve ${achCls}" style="font-size:10px;padding:2px 9px;">${achLabel}</span></td>
+      <td><span style="font-family:var(--mono);color:${projected>=plan?'var(--success)':'var(--warn)'};">${projected}</span>
+        <span class="achieve ${projCls}" style="font-size:9px;padding:1px 6px;margin-left:3px;">${projected>=plan?'✓达产':projected>=plan*0.9?'⚡接近':'✗不足'}</span>
+      </td>
+      <td><span class="badge ${a.worker.status==='在岗'?'bg':'br'}">${a.worker.status}</span></td>
+    </tr>`;
+  }).join('');
+
+  const totPct=totPlan>0?Math.round(totActual/totPlan*100):0;
+  document.getElementById('achieve-foot').innerHTML=`
+    <td class="L" style="padding-left:11px;font-size:12px;color:var(--text2);">团队合计</td>
+    <td style="font-family:var(--mono);">${totPlan}</td>
+    <td style="font-family:var(--mono);font-weight:700;color:var(--accent);">${totActual}</td>
+    <td style="font-family:var(--mono);">${totPct}%</td>
+    <td colspan="4">—</td>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  LOG
+// ════════════════════════════════════════════════════════════
+function recordToLog(){
+  if(!S.lastAssign){alert('请先完成排产分配');return;}
+  const entry={
+    date:today(),
+    time:new Date().toTimeString().slice(0,8),
+    assign:S.lastAssign.map(a=>({
+      name:a.worker.name,id:a.worker.id,plan:a.output,
+      actual:a.items.reduce((s,it)=>{
+        const wi=S.workers.indexOf(a.worker);
+        const key=`${wi}_${it.pid}_${it.procIdx}`;
+        return s+(S.actualDone[key]||0);
+      },0),
+      items:a.items.map(it=>({prod:it.prod,proc:it.procName,qty:it.qty,color:it.prodColor}))
+    })),
+    totalPlan:S.lastAssign.reduce((s,a)=>s+a.output,0),
+    totalActual:S.lastAssign.reduce((a2,a)=>{
+      const wi=S.workers.indexOf(a.worker);
+      return a2+a.items.reduce((s,it)=>s+(S.actualDone[`${wi}_${it.pid}_${it.procIdx}`]||0),0);
+    },0),
+  };
+  S.log.unshift(entry);
+  renderLog();
+  showToast(`📝 已记录到 ${entry.date} 日志`);
+  markUnsaved();
+}
+
+function renderLog(){
+  const filter=document.getElementById('log-filter-date').value;
+  const entries=filter?S.log.filter(e=>e.date===filter):S.log;
+  document.getElementById('log-count').textContent=`共 ${entries.length} 条记录`;
+  if(!entries.length){
+    document.getElementById('log-table-wrap').innerHTML=`<div class="log-empty">${filter?`${filter} 无记录`:'暂无日志，在概览页点击「记录到日志」'}</div>`;
+    return;
+  }
+  let html=`<table><thead><tr>
+    <th class="L">日期</th><th class="L">时间</th>
+    <th>计划产量</th><th>实际产量</th><th>完成率</th><th>达产</th>
+    <th class="L">人员明细</th><th>操作</th>
+  </tr></thead><tbody>`;
+  entries.forEach((e,ei)=>{
+    const pct=e.totalPlan>0?Math.round(e.totalActual/e.totalPlan*100):0;
+    const achieved=pct>=95;
+    html+=`<tr>
+      <td class="L" style="font-family:var(--mono);font-weight:600;">${e.date}</td>
+      <td class="L" style="font-family:var(--mono);font-size:11px;color:var(--text3);">${e.time}</td>
+      <td style="font-family:var(--mono);">${e.totalPlan.toLocaleString()}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--accent);">${e.totalActual.toLocaleString()}</td>
+      <td style="font-family:var(--mono);">${pct}%</td>
+      <td><span class="achieve ${achieved?'ach-yes':'ach-no'}" style="font-size:10px;padding:2px 8px;">${achieved?'✓ 达产':'✗ 未达'}</span></td>
+      <td class="L">
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${e.assign.map(a=>{
+            const p=a.plan>0?Math.round(a.actual/a.plan*100):0;
+            return`<span style="font-size:10px;padding:2px 7px;border-radius:12px;background:rgba(26,111,186,.08);border:1px solid var(--border);">
+              ${a.name}: <b>${a.actual}</b>/${a.plan}(${p}%)
+            </span>`;
+          }).join('')}
+        </div>
+      </td>
+      <td><button class="btn btn-danger btn-xs" onclick="S.log.splice(${S.log.indexOf(e)},1);renderLog();markUnsaved();">删</button></td>
+    </tr>`;
+  });
+  html+=`</tbody></table>`;
+  document.getElementById('log-table-wrap').innerHTML=html;
+}
+
+function clearLog(){
+  if(!confirm('确认清空所有日志？'))return;
+  S.log=[];renderLog();markUnsaved();
+}
+
+// ════════════════════════════════════════════════════════════
+//  MULTI-DAY SCHEDULE
+// ════════════════════════════════════════════════════════════
+function runMultiDay(){
+  const startDate=document.getElementById('sd-date').value||today();
+  const days=Math.min(14,Math.max(1,+document.getElementById('sd-days').value||3));
+  const eh=effH();
+  const active=S.workers.filter(w=>w.status==='在岗');
+  const tasks=buildTasks();
+
+  const dayResults=[];
+  for(let day=0;day<days;day++){
+    const date=addDays(startDate,day);
+    // Deep copy remaining
+    const dayTasks=tasks.map(t=>({...t}));
+    const assign=assignTasks(dayTasks,active,eh);
+    dayResults.push({date,assign,tasks:dayTasks});
+    // Subtract from master tasks
+    dayTasks.forEach(dt=>{
+      const mt=tasks.find(t=>t.pid===dt.pid&&t.procIdx===dt.procIdx);
+      if(mt)mt.remaining=dt.remaining;
+    });
+  }
+
+  let html=`<div class="day-tabs">`;
+  dayResults.forEach((dr,i)=>{
+    const wd=WDAYS[new Date(dr.date).getDay()];
+    html+=`<div class="dtab ${i===0?'active':''}" id="dtab-${i}" onclick="showDay(${i})">${fmtDate(dr.date)} 周${wd}</div>`;
+  });
+  html+=`</div>`;
+
+  dayResults.forEach((dr,di)=>{
+    const combos=[];
+    dr.assign.forEach(a=>a.items.forEach(it=>{
+      const key=`${it.pid}_${it.procIdx}`;
+      if(!combos.find(c=>c.key===key))combos.push({key,pid:it.pid,pci:it.procIdx,name:it.prod,procName:it.procName,color:it.prodColor});
+    }));
+    const totOut=dr.assign.reduce((s,a)=>s+a.output,0);
+    const shiftStartMin=t2m(S.shift.start);
+    const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+    const lunchLen=(lunchE-lunchS)/60;
+
+    html+=`<div class="sec" id="day-result-${di}" style="display:${di===0?'block':'none'};">
+      <div class="sec-head">
+        <div class="sec-title"><div class="sicon si-b">📅</div>${dr.date} 排程</div>
+        <span style="font-size:12px;color:var(--text2);">计划产量 <b style="color:var(--accent);">${totOut.toLocaleString()}</b> pcs</span>
+      </div>
+      <div class="tw"><table><thead><tr>
+        <th class="L">检验员</th>
+        ${combos.map(c=>`<th style="font-size:10px;"><div style="color:${c.color};font-weight:700;">${c.name}</div><div style="font-size:9px;color:var(--text3);">${c.procName}</div></th>`).join('')}
+        <th>产量</th><th>工时</th><th>利用率</th><th>完成时间</th>
+      </tr></thead><tbody>
+      ${dr.assign.map(a=>{
+        const util=Math.min(100,Math.round(a.totalH/eh*100));
+        const fillCls=util>=90?'pred':util>=70?'pgreen':'pyellow';
+        const etaH=a.totalH+(a.totalH>(lunchS-shiftStartMin)/60?lunchLen:0);
+        const etaMin=shiftStartMin+Math.round(etaH*60);
+        const over=etaMin>t2m(S.shift.end);
+        return`<tr>
+          <td class="L"><div style="display:flex;align-items:center;gap:5px;">
+            <div style="width:19px;height:19px;border-radius:50%;background:${a.worker.color}22;border:1px solid ${a.worker.color}66;
+              color:${a.worker.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;">${a.worker.name[0]}</div>
+            <span style="font-weight:600;font-size:11px;">${a.worker.name}</span></div></td>
+          ${combos.map(c=>{
+            const it=a.items.find(i=>i.pid===c.pid&&i.procIdx===c.pci);
+            return`<td>${it?`<span style="font-family:var(--mono);font-weight:700;color:${c.color};">${it.qty}</span>`:'<span style="color:var(--text3);">—</span>'}</td>`;
+          }).join('')}
+          <td style="font-family:var(--mono);color:var(--accent);font-weight:700;">${a.output}</td>
+          <td style="font-family:var(--mono);font-size:11px;">${a.totalH.toFixed(1)}h</td>
+          <td><div style="display:flex;align-items:center;gap:3px;">
+            <div class="pbar" style="width:44px;"><div class="pfill ${fillCls}" style="width:${util}%;"></div></div>
+            <span style="font-size:10px;font-family:var(--mono);">${util}%</span></div></td>
+          <td style="font-family:var(--mono);font-size:11px;color:${over?'var(--danger)':'var(--success)'};">${m2t(Math.min(etaMin,1439))}${over?' +1':''}</td>
+        </tr>`;
+      }).join('')}
+      </tbody></table></div>
+      ${buildGanttHTML2(dr.assign,eh)}
+    </div>`;
+  });
+
+  const unfinished=tasks.filter(t=>t.remaining>0);
+  html+=unfinished.length
+    ?`<div class="alert al-warn" style="margin-top:8px;">⚠ ${days}天后剩余：${unfinished.map(t=>`<b>${t.prod}</b>${t.procName}(${t.remaining}pcs)`).join('、')}</div>`
+    :`<div class="alert al-success" style="margin-top:8px;">✅ 所有任务在 <b>${days}</b> 天内可完成</div>`;
+
+  document.getElementById('sched-output').innerHTML=html;
+}
+
+function showDay(i){
+  document.querySelectorAll('[id^="day-result-"]').forEach(el=>el.style.display='none');
+  document.querySelectorAll('[id^="dtab-"]').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById(`day-result-${i}`);
+  const tab=document.getElementById(`dtab-${i}`);
+  if(el)el.style.display='block';
+  if(tab)tab.classList.add('active');
+}
+
+function buildGanttHTML2(assign,eh){
+  const shiftStartMin=t2m(S.shift.start);
+  const totalMin=eh*60+(t2m(S.shift.lunchE)-t2m(S.shift.lunchS));
+  const lunchS=t2m(S.shift.lunchS),lunchE=t2m(S.shift.lunchE);
+  const ticks=4;
+  const tickArr=Array.from({length:ticks+1},(_,i)=>m2t(shiftStartMin+Math.round(totalMin/ticks*i)));
+  let html=`<div class="gantt-wrap">
+    <div class="gantt-tick-row">
+      <div class="gantt-spacer"></div>
+      <div class="gantt-ticks">${tickArr.map(t=>`<div class="gantt-tick">${t}</div>`).join('')}</div>
+      <div class="gantt-lbl"></div>
+    </div>`;
+  assign.forEach(a=>{
+    html+=`<div class="gantt-row">
+      <div class="gantt-name">${a.worker.name}</div>
+      <div class="gantt-bar">`;
+    const lL=((lunchS-shiftStartMin)/totalMin*100).toFixed(1);
+    const lW=((lunchE-lunchS)/totalMin*100).toFixed(1);
+    html+=`<div class="gantt-seg" style="left:${lL}%;width:${lW}%;background:#ccc;opacity:.4;"><span>午</span></div>`;
+    let cur=shiftStartMin;
+    a.items.forEach(item=>{
+      if(cur>=lunchS&&cur<lunchE)cur=lunchE;
+      const left=((cur-shiftStartMin)/totalMin*100).toFixed(1);
+      const w=(item.hours*60/totalMin*100).toFixed(1);
+      html+=`<div class="gantt-seg" style="left:${left}%;width:${w}%;background:${item.prodColor};opacity:.82;"><span>${item.prod}</span></div>`;
+      cur+=item.hours*60;
+      if(cur>lunchS&&cur<lunchE)cur=lunchE;
+    });
+    html+=`</div><div class="gantt-lbl">${a.totalH.toFixed(1)}h</div></div>`;
+  });
+  return html+`</div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  GLOBAL REFRESH  全局刷新并保存
+// ════════════════════════════════════════════════════════════
+function doGlobalRefresh(btn){
+  // 旋转动画
+  if(btn){btn.classList.add('btn-spinning');setTimeout(()=>btn.classList.remove('btn-spinning'),600);}
+  // 重新渲染所有模块
+  refreshAll();
+  renderGapWarning();
+  updateKPI();
+  renderCDemand();
+  renderCDHistory();
+  if(S.lastAssign){
+    const eh=effH();
+    renderOvTable(S.lastAssign,eh);
+    renderGantt(S.lastAssign,eh,'ov-gantt');
+    updateETA(S.lastAssign,eh);
+    updateAchieveKPI(S.lastAssign,eh);
+    renderAchConfirmBar();
+  }
+  renderProgress();
+  saveData();
+  showToast('🔄 已刷新并保存');
+}
+
+// ════════════════════════════════════════════════════════════
+//  CUSTOMER DEMAND  客户需求
+// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  CLIENT DEMAND UI  客户需求界面
+// ════════════════════════════════════════════════════════════
+
+// 初始化：填充「按客户筛选」下拉 + 模具号下拉
+function initCDProdSel(){
+  // 按客户筛选下拉
+  const filterSel=document.getElementById('cd-filter-by-cust');
+  if(filterSel){
+    const cur=filterSel.value;
+    filterSel.innerHTML='<option value="">全部客户</option>'+
+      getAllCustomers().map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
+  }
+  // 刷新模具号下拉（保持当前客户过滤）
+  refreshMoldSel();
+}
+
+// 按客户过滤后刷新模具号下拉
+function refreshMoldSel(){
+  const filterEl=document.getElementById('cd-filter-by-cust');
+  const filterCust=filterEl?filterEl.value:'';
+  const prodSel=document.getElementById('cd-prod');
+  if(!prodSel)return;
+  // 确保每个产品的customer字段是最新的
+  const prods=S.products.filter(p=>{
+    const pc=p.customer||inferCustomer(p.model)||inferCustomer(p.name)||'';
+    if(!filterCust) return true;
+    return pc===filterCust;
+  });
+  prodSel.innerHTML='<option value="">-- 选择模具号 --</option>'+
+    prods.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const autoEl=document.getElementById('cd-auto-cust');
+  if(autoEl) autoEl.textContent='';
+}
+
+// 客户筛选变化 → 刷新模具号列表
+function onFilterCustChange(){
+  refreshMoldSel();
+}
+
+// 选了模具号 → 自动识别并显示客户
+function onCDProdChange(){
+  const pid=document.getElementById('cd-prod')?.value;
+  const autoEl=document.getElementById('cd-auto-cust');
+  if(!autoEl)return;
+  if(!pid){autoEl.textContent='';return;}
+  const p=S.products.find(x=>x.id===pid);
+  const cust=p?(p.customer||inferCustomer(p.model)||''):'';
+  autoEl.textContent=cust?`→ ${cust}`:'';
+}
+
+function addCDemand(){
+  const pid=document.getElementById('cd-prod')?.value;
+  const date=document.getElementById('cd-date')?.value;
+  const qty=+(document.getElementById('cd-qty')?.value||0);
+  const orderNo=(document.getElementById('cd-orderno')?.value||'').trim();
+  if(!pid||!date||!qty){showToast('请填写模具号、日期和数量','error');return;}
+  const p=S.products.find(x=>x.id===pid);
+  const custName=p?(p.customer||inferCustomer(p.model)||''):'';
+  const custLabel=[custName,orderNo].filter(Boolean).join(' · ');
+  S.cdDemands.push({
+    id:'CD'+Date.now(),pid,prodName:p?p.name:'',
+    date,qty,cust:custLabel,customer:custName,orderNo,
+    createdAt:new Date().toISOString()
+  });
+  renderCDemand();
+  renderCDHistory();
+  renderAllOrders();
+  markUnsaved();
+  if(document.getElementById('cd-qty')) document.getElementById('cd-qty').value='';
+  if(document.getElementById('cd-orderno')) document.getElementById('cd-orderno').value='';
+  showToast('✅ 需求已添加');
+}
+
+// ── 管理客户&模具号 Modal ──
+function openMoldManagerModal(){
+  renderMoldModalBody();
+  // 填充datalist
+  const dl=document.getElementById('mm-cust-list');
+  if(dl) dl.innerHTML=getAllCustomers().map(c=>`<option value="${c}">`).join('');
+  document.getElementById('mold-modal').style.display='flex';
+}
+
+function renderMoldModalBody(){
+  const mc=getMoldCustomer();
+  // 按客户分组
+  const groups={};
+  getAllCustomers().forEach(c=>{groups[c]=[];});
+  Object.entries(mc).forEach(([mold,cust])=>{
+    if(!groups[cust]) groups[cust]=[];
+    groups[cust].push(mold);
+  });
+  const el=document.getElementById('mold-modal-body');
+  if(!el)return;
+  el.innerHTML=Object.entries(groups).map(([cust,molds])=>`
+    <div style="margin-bottom:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">${cust}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+        ${molds.sort((a,b)=>+a-+b).map(m=>`
+          <span style="display:inline-flex;align-items:center;gap:3px;background:var(--surface);
+            border:1px solid var(--border2);border-radius:5px;padding:2px 7px;font-family:var(--mono);font-size:11px;">
+            ${m}#
+            <button onclick="removeMold('${m}')" style="border:none;background:none;cursor:pointer;
+              color:var(--danger);font-size:11px;padding:0 2px;line-height:1;" title="删除此模具号">×</button>
+          </span>`).join('')}
+        ${!molds.length?'<span style="font-size:11px;color:var(--text3);">暂无模具号</span>':''}
+      </div>
+    </div>`).join('');
+}
+
+function removeMold(mold){
+  if(!confirm(`确认删除模具号 ${mold}#？`))return;
+  if(!S.moldCustomer) S.moldCustomer={...INIT_MOLD_CUSTOMER};
+  delete S.moldCustomer[mold];
+  // 同步删除products里对应产品（可选，询问）
+  const pid='P'+mold;
+  const pi=S.products.findIndex(p=>p.id===pid||p.model===mold);
+  if(pi>=0&&confirm(`同时删除产品 ${S.products[pi].name} 的所有配置？`)){
+    const rpid=S.products[pi].id;
+    S.products.splice(pi,1);
+    S.demands=S.demands.filter(d=>d.pid!==rpid);
+    delete S.procDone[rpid];
+    S.workers.forEach(w=>delete w.skills[rpid]);
+    refreshAll();
+  }
+  renderMoldModalBody();
+  initCDProdSel();
+  markUnsaved();
+  showToast(`已删除模具号 ${mold}#`);
+}
+
+function doAddMoldCustomer(){
+  const custInput=(document.getElementById('mm-cust')?.value||'').trim();
+  const moldsInput=(document.getElementById('mm-molds')?.value||'').trim();
+  if(!custInput){showToast('请输入客户名称','error');return;}
+  if(!moldsInput){showToast('请输入至少一个模具号','error');return;}
+
+  const newMolds=moldsInput.split(/[,，\s]+/).map(m=>m.replace(/[^0-9]/g,'')).filter(Boolean);
+  if(!newMolds.length){showToast('模具号格式不正确','error');return;}
+
+  // 确保客户列表里有这个客户
+  if(!S.customers) S.customers=[...INIT_CUSTOMERS];
+  if(!S.customers.includes(custInput)) S.customers.push(custInput);
+
+  // 更新moldCustomer映射
+  if(!S.moldCustomer) S.moldCustomer={...INIT_MOLD_CUSTOMER};
+
+  let added=0;
+  newMolds.forEach(mold=>{
+    S.moldCustomer[mold]=custInput;
+    // 同时添加到products（若不存在）
+    const pid='P'+mold;
+    if(!S.products.find(p=>p.id===pid)){
+      S.products.push({id:pid,name:`${mold}#`,model:mold,difficulty:'中',customer:custInput,
+        processes:['序1检验','序2检验','序3检验']});
+      S.demands.push({pid,stock:0,demand:0,pending:0,defectRate:1.5,priority:'中',
+        deadlineDate:today(),deadlineTime:'18:00',customer:custInput});
+      S.procDone[pid]=[0,0,0];
+      added++;
+    } else {
+      // 已有产品，更新客户
+      const p=S.products.find(x=>x.id===pid);
+      if(p) p.customer=custInput;
+    }
+  });
+
+  refreshAll();
+  initCDProdSel();
+  renderMoldModalBody();
+  // 更新datalist
+  const dl=document.getElementById('mm-cust-list');
+  if(dl) dl.innerHTML=getAllCustomers().map(c=>`<option value="${c}">`).join('');
+  // 清空输入
+  if(document.getElementById('mm-molds')) document.getElementById('mm-molds').value='';
+  markUnsaved();
+  showToast(`✅ 已为「${custInput}」添加 ${newMolds.join('、')}# ${added>0?`(新增${added}个产品)`:''}`);
+}
+
+// 兼容旧代码（已移除的函数）
+function addNewCustomer(){openMoldManagerModal();}
+function addNewMoldProduct(){openMoldManagerModal();}
+function onCDCustomerChange(){}
+
+
+function renderCDemand(){
+  initCDProdSel();
+  const tdy=today();
+  const pending=S.cdDemands.filter(d=>d.date>=tdy);
+  document.getElementById('cd-stat').textContent=`未完成 ${pending.length} 项`;
+  const days=Array.from({length:7},(_,i)=>addDays(tdy,i));
+  const wd=['日','一','二','三','四','五','六'];
+  document.getElementById('cd-week').innerHTML=days.map(ds=>{
+    const d=new Date(ds);
+    const isTdy=ds===tdy;
+    const items=S.cdDemands.filter(x=>x.date===ds);
+    const dayLabel=`${d.getMonth()+1}/${d.getDate()} 周${wd[d.getDay()]}`;
+    return`<div class="cd-day-col ${isTdy?'cd-today':''}">
+      <div class="cd-day-hdr">${isTdy?'📍今天':dayLabel}<small>${isTdy?ds:''}</small></div>
+      ${items.length?items.map(it=>`
+        <div class="cd-item">
+          <div class="cd-item-name" title="${it.prodName}">${it.prodName}</div>
+          <div style="font-size:10px;color:var(--accent2);font-weight:600;">${it.customer||''}</div>
+          <div class="cd-item-qty">${it.qty.toLocaleString()} pcs</div>
+          ${it.orderNo?`<div class="cd-item-cust">📋 ${it.orderNo}</div>`:''}
+          <div style="display:flex;gap:4px;margin-top:4px;">
+            <button class="cd-done-btn" onclick="completeCDemand('${it.id}')">✅ 已发货</button>
+            <button style="font-size:9px;padding:2px 6px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--danger);"
+              onclick="deleteCDemand('${it.id}')">✕</button>
+          </div>
+        </div>`).join('')
+      :`<div class="cd-empty">无需求</div>`}
+    </div>`;
+  }).join('');
+}
+
+function completeCDemand(id){
+  const idx=S.cdDemands.findIndex(d=>d.id===id);
+  if(idx<0)return;
+  const item={...S.cdDemands[idx],completedAt:new Date().toISOString()};
+  S.cdHistory.unshift(item);
+  S.cdDemands.splice(idx,1);
+  renderCDemand();
+  renderCDHistory();
+  renderAllOrders();
+  markUnsaved();
+  showToast('✅ 已标记发货完成，移入历史');
+}
+
+function deleteCDemand(id){
+  if(!confirm('确认删除此需求？'))return;
+  S.cdDemands=S.cdDemands.filter(d=>d.id!==id);
+  renderCDemand();
+  renderAllOrders();
+  markUnsaved();
+}
+
+function renderCDHistory(){
+  const el=document.getElementById('cd-hist-body');
+  if(!el)return;
+  if(!S.cdHistory.length){
+    el.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">暂无历史记录</td></tr>';
+    return;
+  }
+  el.innerHTML=S.cdHistory.map((h,hi)=>`<tr>
+    <td class="L" style="font-weight:600;">${h.prodName}</td>
+    <td class="L" style="color:var(--text3);">${h.cust||'—'}</td>
+    <td style="font-family:var(--mono);color:var(--accent);font-weight:700;">${h.qty.toLocaleString()}</td>
+    <td style="font-family:var(--mono);font-size:11px;">${h.date}</td>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--success);">${(h.completedAt||'').slice(0,16).replace('T',' ')}</td>
+    <td><button class="btn btn-danger btn-xs" onclick="S.cdHistory.splice(${hi},1);renderCDHistory();markUnsaved();">删</button></td>
+  </tr>`).join('');
+}
+
+// ── 全部订单查询 & 编辑 ──
+function initOrderFilterProd(){
+  // 产品筛选
+  const sel=document.getElementById('cd-filter-prod');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">全部产品</option>'+
+      S.products.map(p=>`<option value="${p.id}" ${cur===p.id?'selected':''}>${p.name}</option>`).join('');
+  }
+  // 客户筛选（独立处理，不依赖产品筛选是否存在）
+  const custSel=document.getElementById('cd-filter-cust');
+  if(custSel){
+    const curCust=custSel.value;
+    custSel.innerHTML='<option value="">全部客户</option>'+
+      getAllCustomers().map(c=>`<option value="${c}" ${c===curCust?'selected':''}>${c}</option>`).join('');
+  }
+}
+
+function clearOrderFilters(){
+  ['cd-filter-prod','cd-filter-cust','cd-filter-from','cd-filter-to'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  renderAllOrders();
+}
+
+function renderAllOrders(){
+  initOrderFilterProd();
+  const filterPid=document.getElementById('cd-filter-prod')?.value||'';
+  const filterCust=document.getElementById('cd-filter-cust')?.value||'';
+  const filterFrom=document.getElementById('cd-filter-from')?.value||'';
+  const filterTo=document.getElementById('cd-filter-to')?.value||'';
+  const tdy=today();
+
+  let list=[...S.cdDemands];
+  if(filterPid) list=list.filter(d=>d.pid===filterPid);
+  if(filterCust) list=list.filter(d=>(d.customer||'')=== filterCust);
+  if(filterFrom) list=list.filter(d=>d.date>=filterFrom);
+  if(filterTo) list=list.filter(d=>d.date<=filterTo);
+  // 按交货日期升序
+  list.sort((a,b)=>a.date.localeCompare(b.date));
+
+  const statEl=document.getElementById('cd-all-stat');
+  if(statEl) statEl.textContent=`共 ${list.length} 条 / 总计 ${list.reduce((s,d)=>s+(d.qty||0),0).toLocaleString()} pcs`;
+
+  const el=document.getElementById('cd-all-body');
+  if(!el)return;
+  if(!list.length){
+    el.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">无匹配订单</td></tr>';
+    return;
+  }
+
+  el.innerHTML=list.map(d=>{
+    const diffDays=Math.round((new Date(d.date)-new Date(tdy))/86400000);
+    const isOverdue=diffDays<0;
+    const isUrgent=diffDays>=0&&diffDays<=3;
+    const diffStr=isOverdue?`<span style="color:var(--danger);font-weight:700;">逾期${Math.abs(diffDays)}天</span>`
+      :isUrgent?`<span style="color:var(--warn);font-weight:700;">${diffDays}天</span>`
+      :`<span style="color:var(--text3);">${diffDays}天</span>`;
+    const statusBadge=isOverdue?`<span class="badge br">逾期</span>`
+      :isUrgent?`<span class="badge bw">紧迫</span>`
+      :d.date===tdy?`<span class="badge bo">今日</span>`
+      :`<span class="badge bgr">正常</span>`;
+    const idx=S.cdDemands.findIndex(x=>x.id===d.id);
+    return`<tr style="${isOverdue?'background:rgba(192,57,43,.03)':isUrgent?'background:rgba(201,125,10,.03)':''}">
+      <td class="L" style="font-weight:600;">${d.prodName}</td>
+      <td class="L" style="font-size:11px;">
+        <div style="font-weight:700;color:var(--accent2);">${d.customer||''}</div>
+        <input type="text" value="${d.orderNo||''}" placeholder="订单号" class="iw120"
+          onchange="if(${idx}>=0){S.cdDemands[${idx}].orderNo=this.value;S.cdDemands[${idx}].cust=(d.customer||'')+' · '+this.value;markUnsaved();}"
+          placeholder="客户/订单号">
+      </td>
+      <td>
+        <input type="number" min="1" value="${d.qty}" class="iw80"
+          onchange="if(${idx}>=0){S.cdDemands[${idx}].qty=+this.value;renderCDemand();renderAllOrders();markUnsaved();}">
+      </td>
+      <td>
+        <input type="date" value="${d.date}" class="iw120"
+          onchange="if(${idx}>=0){S.cdDemands[${idx}].date=this.value;renderCDemand();renderAllOrders();markUnsaved();}">
+      </td>
+      <td>${diffStr}</td>
+      <td>${statusBadge}</td>
+      <td style="display:flex;gap:4px;">
+        <button class="btn btn-save btn-xs" onclick="completeCDemand('${d.id}')">✅已发</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteCDemand('${d.id}')">删</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  ACHIEVE CONFIRM  达产确认
+// ════════════════════════════════════════════════════════════
+function renderAchConfirmBar(){
+  const el=document.getElementById('ach-confirm-bar');
+  if(!el||!S.lastAssign)return;
+  const tdy=today();
+  const conf=S.dayConfirm[tdy]||{confirmed:false,actual:null};
+  const planTotal=S.lastAssign.reduce((s,a)=>s+a.output,0);
+
+  // 计算实际已录入合计
+  const actualTotal=S.lastAssign.reduce((s,a)=>{
+    const wi=S.workers.indexOf(a.worker);
+    return s+a.items.reduce((ss,it)=>ss+(S.actualDone[`${wi}_${it.pid}_${it.procIdx}`]||0),0);
+  },0);
+
+  const met=actualTotal>=planTotal*0.95;
+  const pct=planTotal>0?Math.round(actualTotal/planTotal*100):0;
+
+  if(conf.confirmed){
+    el.innerHTML=`<div class="ach-bar ach-bar-ok" style="font-size:12px;">
+      ✅ 今日达产已确认 &nbsp;|&nbsp; 实际检验 <b style="font-family:var(--mono);color:var(--accent);">${conf.actual??actualTotal}</b> pcs
+      &nbsp;/&nbsp; 计划 <b>${planTotal}</b> pcs &nbsp;|&nbsp;
+      <button class="btn btn-ghost btn-sm" onclick="S.dayConfirm['${tdy}']={confirmed:false,actual:null};renderAchConfirmBar();markUnsaved();">撤销确认</button>
+    </div>`;
+    return;
+  }
+
+  if(met){
+    el.innerHTML=`<div class="ach-bar ach-bar-ok">
+      <span style="font-size:13px;font-weight:700;color:var(--success);">✓ 当前达产 ${pct}%</span>
+      <span style="font-size:12px;color:var(--text2);">实际 <b>${actualTotal}</b> / 计划 <b>${planTotal}</b> pcs</span>
+      <button class="btn btn-save btn-sm" onclick="confirmAchieve(true,${actualTotal})">✅ 确认今日达产</button>
+    </div>`;
+  } else {
+    el.innerHTML=`<div class="ach-bar ach-bar-fail">
+      <span style="font-size:13px;font-weight:700;color:var(--danger);">✗ 当前未达产 ${pct}%</span>
+      <span style="font-size:12px;color:var(--text2);">实际 <b>${actualTotal}</b> / 计划 <b>${planTotal}</b> pcs</span>
+      <span style="font-size:12px;color:var(--text3);">手工输入今日实际检验量：</span>
+      <input type="number" id="actual-input" value="${actualTotal}" min="0"
+        style="width:80px;height:28px;font-family:var(--mono);font-size:13px;font-weight:700;text-align:center;">
+      <button class="btn btn-warn btn-sm" onclick="confirmAchieve(false,+document.getElementById('actual-input').value)">📝 确认并调整计划</button>
+    </div>`;
+  }
+}
+
+function confirmAchieve(met,actual){
+  const tdy=today();
+  const planTotal=S.lastAssign?S.lastAssign.reduce((s,a)=>s+a.output,0):0;
+  S.dayConfirm[tdy]={confirmed:true,actual,met,plan:planTotal,date:tdy};
+
+  if(!met&&S.lastAssign){
+    // 计算差额，自动向后续计划追加
+    const shortfall=Math.max(0,planTotal-actual);
+    if(shortfall>0){
+      // 在需求库存的pending字段上追加（按比例分摊到各产品）
+      const tasks=buildTasks();
+      if(tasks.length>0){
+        const perTask=Math.ceil(shortfall/tasks.length);
+        tasks.forEach(t=>{
+          const d=S.demands.find(x=>x.pid===t.pid);
+          if(d) d.pending=Math.max(0,(d.pending||0)+perTask);
+        });
+        renderDemand();
+        renderProcStatus();
+        showToast(`📋 已将 ${shortfall} pcs 缺口分摊追加到后续计划`);
+      }
+    }
+  }
+  renderAchConfirmBar();
+  markUnsaved();
+  showToast(met?'✅ 达产已确认':'📝 实际数量已确认，后续计划已自动调整');
+}
+
+// ════════════════════════════════════════════════════════════
+//  LOCK 工序强制指派
+// ════════════════════════════════════════════════════════════
+let _lockPopupEl=null;
+
+function openLockPopup(e,pid,pci,prodName,procName){
+  e.stopPropagation();
+  closeLockPopup();
+  const lockKey=`${pid}_${pci}`;
+  const currentWid=S.locks[lockKey]||null;
+
+  // 找出会检该工序的在岗人员
+  const capable=S.workers.filter(w=>{
+    const sk=getSkill(w,pid,pci);
+    return sk.on&&(sk.hourly||0)>0;
+  });
+
+  const pop=document.createElement('div');
+  pop.className='lock-popup';
+  pop.innerHTML=`
+    <div class="lock-popup-title">🔒 锁定「${prodName} · ${procName}」给：</div>
+    <div class="lock-popup-item ${!currentWid?'selected':''}" onclick="setLock('${lockKey}',null)">
+      <span style="font-size:14px;">🔓</span>
+      <span>不锁定（自动分配）</span>
+    </div>
+    ${capable.map(w=>`
+      <div class="lock-popup-item ${currentWid===w.id?'selected':''}" onclick="setLock('${lockKey}','${w.id}')">
+        <div style="width:20px;height:20px;border-radius:50%;background:${w.color}22;border:1.5px solid ${w.color};
+          color:${w.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${w.name[0]}</div>
+        <span>${w.name}</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:auto;">${getSkill(w,pid,pci).hourly}pcs/h</span>
+        ${currentWid===w.id?'<span style="color:#c97d0a;">🔒</span>':''}
+      </div>`).join('')}
+    ${capable.length===0?`<div style="font-size:11px;color:var(--text3);padding:6px 7px;">无会检此工序的人员</div>`:''}
+    <div style="font-size:10px;color:var(--text3);margin-top:8px;padding-top:6px;border-top:1px solid var(--border);line-height:1.6;">
+      🔒 锁定后排程将强制把此工序<b>全部</b>分配给该人员<br>其他人员不会承接此工序
+    </div>`;
+
+  // 定位弹窗
+  const rect=e.target.getBoundingClientRect();
+  pop.style.top=(rect.bottom+window.scrollY+4)+'px';
+  pop.style.left=Math.min(rect.left+window.scrollX,window.innerWidth-250)+'px';
+  document.body.appendChild(pop);
+  _lockPopupEl=pop;
+
+  // 点其他地方关闭
+  setTimeout(()=>document.addEventListener('click',closeLockPopup,{once:true}),10);
+}
+
+function closeLockPopup(){
+  if(_lockPopupEl){_lockPopupEl.remove();_lockPopupEl=null;}
+}
+
+function setLock(lockKey,wid){
+  closeLockPopup();
+  if(wid===null){
+    delete S.locks[lockKey];
+  } else {
+    S.locks[lockKey]=wid;
+  }
+  renderMatrix();
+  renderLockSummary();
+  markUnsaved();
+  showToast(wid?`🔒 已锁定工序给 ${(S.workers.find(w=>w.id===wid)||{}).name||wid}`:'🔓 已取消锁定');
+}
+
+function renderLockSummary(){
+  const el=document.getElementById('lock-summary');
+  if(!el)return;
+  const locks=Object.entries(S.locks);
+  if(!locks.length){
+    el.innerHTML=`<div style="text-align:center;color:var(--text3);font-size:12px;padding:14px;">暂无锁定工序，在技能矩阵格子点击 🔓 可锁定</div>`;
+    return;
+  }
+  el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">
+    ${locks.map(([key,wid])=>{
+      const [pid,pciStr]=key.split('_');
+      const pci=+pciStr;
+      const p=S.products.find(x=>x.id===pid);
+      const w=S.workers.find(x=>x.id===wid);
+      if(!p||!w)return'';
+      const proc=p.processes[pci]||`序${pci+1}`;
+      const pi=S.products.indexOf(p);
+      return`<div style="display:inline-flex;align-items:center;gap:6px;
+        background:rgba(201,125,10,.09);border:1px solid rgba(201,125,10,.3);
+        border-radius:8px;padding:5px 10px;font-size:11px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${COLORS[pi]};"></div>
+        <span style="font-weight:700;">${p.name}</span>
+        <span style="color:var(--text3);">·</span>
+        <span>${proc}</span>
+        <span style="color:var(--text3);">→</span>
+        <div style="width:18px;height:18px;border-radius:50%;background:${w.color}22;border:1px solid ${w.color};
+          color:${w.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;">${w.name[0]}</div>
+        <span style="font-weight:700;color:#c97d0a;">${w.name}</span>
+        <button onclick="setLock('${key}',null)" style="border:none;background:none;cursor:pointer;
+          color:var(--danger);font-size:12px;padding:0;line-height:1;" title="取消锁定">✕</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  RECRUIT
+// ════════════════════════════════════════════════════════════
+function addRecruit(){
+  const name=document.getElementById('r-name').value.trim();
+  if(!name)return alert('请输入姓名');
+  const id=document.getElementById('r-id').value.trim()||`QC-R${S.recruits.length+1}`;
+  const date=document.getElementById('r-date').value||today();
+  const trainDays=+document.getElementById('r-train').value||30;
+  const note=document.getElementById('r-note').value.trim();
+  S.recruits.push({name,id,joinDate:date,readyDate:addDays(date,trainDays),trainDays,note});
+  renderRecruits();markUnsaved();
+  ['r-name','r-id','r-note'].forEach(x=>document.getElementById(x).value='');
+}
+
+function renderRecruits(){
+  const tdy=today();
+  document.getElementById('r-body').innerHTML=S.recruits.map((r,ri)=>{
+    const elapsed=Math.max(0,Math.floor((new Date(tdy)-new Date(r.joinDate))/86400000));
+    const pct=Math.min(100,Math.round(elapsed/r.trainDays*100));
+    const ready=pct>=100;
+    return`<tr>
+      <td class="L" style="font-weight:600;">${r.name}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${r.id}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${r.joinDate}</td>
+      <td>${r.trainDays}天</td>
+      <td style="font-family:var(--mono);font-size:11px;color:${ready?'var(--success)':'var(--accent2)'};">${r.readyDate}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div class="pbar" style="width:62px;"><div class="pfill ${ready?'pgreen':'pblue'}" style="width:${pct}%;"></div></div>
+          <span style="font-size:10px;font-family:var(--mono);">${pct}%</span>
+        </div>
+      </td>
+      <td style="color:var(--text3);font-size:11px;">${r.note||'—'}</td>
+      <td>
+        ${ready?`<button class="btn btn-primary btn-xs" onclick="promoteRecruit(${ri})">转正</button>`:''}
+        <button class="btn btn-danger btn-xs" style="margin-left:3px;" onclick="S.recruits.splice(${ri},1);renderRecruits();markUnsaved();">删除</button>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">暂无待入职人员</td></tr>';
+
+  const cur=S.workers.filter(w=>w.status==='在岗').length;
+  document.getElementById('r-forecast').innerHTML=`
+    <div style="margin-bottom:10px;"><div style="font-size:10px;color:var(--text3);">当前在岗</div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent);">${cur} 人</div></div>
+    <div style="margin-bottom:10px;"><div style="font-size:10px;color:var(--text3);">培训完成后</div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--success);">${cur+S.recruits.length} 人</div></div>
+    <div style="font-size:10px;color:var(--text3);">* 新人配置工序技能后自动参与排程</div>`;
+}
+
+function promoteRecruit(ri){
+  const r=S.recruits[ri];
+  S.workers.push({id:r.id,name:r.name,status:'在岗',color:COLORS[S.workers.length%COLORS.length],skills:{}});
+  S.recruits.splice(ri,1);
+  renderRecruits();renderMatrix();markUnsaved();
+  alert(`${r.name} 已转为正式检验员！\n请在「人员配置」技能矩阵中配置其会检工序。`);
+  ST('t-personnel');
+}
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+function init(seed=true){
+  document.getElementById('sd-date').value=today();
+  const cdDateEl=document.getElementById('cd-date');
+  if(cdDateEl)cdDateEl.value=addDays(today(),1);
+  if(seed){
+    seedSkills();
+    S.demands=S.products.map(p=>({
+      pid:p.id,stock:0,demand:0,pending:0,
+      defectRate:parseFloat((0.5+Math.random()*2).toFixed(1)),
+      priority:'中',deadlineDate:today(),deadlineTime:'18:00'
+    }));
+    S.procDone={};
+    S.products.forEach(p=>{S.procDone[p.id]=Array(p.processes.length).fill(0);});
+    S.cdDemands=S.cdDemands||[];
+    S.cdHistory=S.cdHistory||[];
+    S.dayConfirm=S.dayConfirm||{};
+    S.locks=S.locks||{};
+    S.customers=S.customers||null;
+    S.moldCustomer=S.moldCustomer||null;
+    document.getElementById('save-dot').className='save-dot dot-unsaved';
+    document.getElementById('save-label').textContent='未保存';
+  } else {
+    S.cdDemands=S.cdDemands||[];
+    S.cdHistory=S.cdHistory||[];
+    S.dayConfirm=S.dayConfirm||{};
+    S.locks=S.locks||{};
+    S.customers=S.customers||null;
+    S.moldCustomer=S.moldCustomer||null;
+  }
+  // 确保每个产品都有正确的customer字段（兼容旧存档）
+  S.products.forEach(p=>{
+    if(!p.customer||p.customer===''){
+      p.customer=inferCustomer(p.model)||inferCustomer(p.name)||'';
+    }
+    // 旧格式产品名（如"产品1#"）不影响，新格式（如"1713#"）自动识别
+  });
+  // 同步demands的customer字段
+  S.demands.forEach(d=>{
+    if(!d.customer){
+      const p=S.products.find(x=>x.id===d.pid);
+      if(p) d.customer=p.customer||'';
+    }
+  });
+  document.getElementById('sh-s').value=S.shift.start;
+  document.getElementById('sh-e').value=S.shift.end;
+  document.getElementById('sh-ls').value=S.shift.lunchS;
+  document.getElementById('sh-le').value=S.shift.lunchE;
+  document.getElementById('sh-eff').textContent=effH().toFixed(1)+'h';
+
+  renderMatrix();
+  renderProducts();
+  renderDemand();
+  renderProcStatus();
+  renderRecruits();
+  renderGapWarning();
+  updateKPI();
+  initCDProdSel();
+  renderCDemand();
+  renderCDHistory();
+  startClock();
+}
+
+// Try to load save first, otherwise seed fresh
+const hasSave=tryLoadSave();
+init(!hasSave);
+</script>
+</body>
+</html>

@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>尺寸报告自动填写工具</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f0f4f8; }
+
+  .header {
+    background: linear-gradient(135deg, #1565C0, #42A5F5);
+    color: white; padding: 15px 25px;
+    display: flex; align-items: center; gap: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .header h1 { font-size: 20px; }
+  .header p { font-size: 12px; opacity: 0.85; margin-top: 3px; }
+
+  .container { display: flex; height: calc(100vh - 65px); }
+
+  /* 左侧面板 */
+  .left-panel {
+    width: 260px; background: white;
+    padding: 15px; overflow-y: auto;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+  }
+
+  .section {
+    border: 1px solid #e0e0e0; border-radius: 8px;
+    padding: 12px; margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: bold;
+    color: #1565C0; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 2px solid #E3F2FD;
+  }
+
+  .btn {
+    display: block; width: 100%; padding: 10px;
+    border: none; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: bold;
+    margin-bottom: 8px; transition: all 0.2s;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-blue { background: #1976D2; color: white; }
+  .btn-green { background: #388E3C; color: white; }
+  .btn-orange { background: #F57C00; color: white; }
+  .btn-gray { background: #757575; color: white; }
+  .btn-red { background: #D32F2F; color: white; }
+
+  .file-info {
+    font-size: 11px; color: #666;
+    background: #f5f5f5; padding: 6px 8px;
+    border-radius: 4px; margin-top: 5px;
+    word-break: break-all; line-height: 1.6;
+  }
+
+  label { font-size: 12px; color: #555; display: block; margin-bottom: 4px; }
+
+  .radio-group { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .radio-group label {
+    display: flex; align-items: center; gap: 3px;
+    font-size: 12px; cursor: pointer; margin: 0;
+    padding: 3px 6px; border: 1px solid #ddd;
+    border-radius: 4px; transition: all 0.2s;
+  }
+  .radio-group label:hover { background: #E3F2FD; border-color: #1976D2; }
+  .radio-group input[type=radio]:checked + span {
+    color: #1976D2; font-weight: bold;
+  }
+
+  select, input[type=number] {
+    width: 100%; padding: 6px 8px; border: 1px solid #ddd;
+    border-radius: 4px; font-size: 12px; margin-bottom: 6px;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+  }
+
+  .log-box {
+    height: 120px; background: #1e1e1e; color: #4CAF50;
+    font-size: 11px; font-family: Consolas, monospace;
+    padding: 8px; border-radius: 4px; overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  /* 右侧内容区 */
+  .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .tabs {
+    display: flex; background: white;
+    border-bottom: 2px solid #E3F2FD;
+    padding: 0 15px;
+  }
+  .tab {
+    padding: 12px 18px; cursor: pointer; font-size: 13px;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+    color: #666; white-space: nowrap;
+  }
+  .tab:hover { color: #1976D2; background: #F5F9FF; }
+  .tab.active { color: #1976D2; border-bottom-color: #1976D2; font-weight: bold; }
+
+  .tab-content { flex: 1; overflow: hidden; display: none; }
+  .tab-content.active { display: flex; flex-direction: column; }
+
+  .tab-info {
+    padding: 10px 15px; font-size: 12px;
+    border-radius: 0; margin: 10px 15px 5px;
+    border-radius: 6px;
+  }
+  .info-blue { background: #E3F2FD; color: #1565C0; }
+  .info-green { background: #E8F5E9; color: #2E7D32; }
+  .info-orange { background: #FFF3E0; color: #E65100; }
+
+  /* 表格 */
+  .table-container {
+    flex: 1; overflow: auto; margin: 5px 15px 15px;
+    border: 1px solid #e0e0e0; border-radius: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: #1565C0; color: white; padding: 10px 12px;
+    text-align: center; position: sticky; top: 0; z-index: 1;
+    white-space: nowrap;
+  }
+  tbody tr:nth-child(even) { background: #F5F5F5; }
+  tbody tr:hover { background: #E3F2FD; }
+  tbody td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #eee; }
+  .td-name { text-align: left !important; max-width: 200px; }
+
+  .badge-pass { background: #E8F5E9; color: #2E7D32; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .badge-fail { background: #FFEBEE; color: #C62828; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .cell-pass { background: #C8E6C9 !important; font-weight: bold; color: #1B5E20; }
+  .cell-fail { background: #FFCDD2 !important; font-weight: bold; color: #B71C1C; }
+
+  /* 弹窗 */
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+  .modal.show { display: flex; }
+  .modal-box { background: white; border-radius: 12px; padding: 25px; min-width: 420px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+  .modal-title { font-size: 16px; font-weight: bold; color: #1565C0; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #E3F2FD; }
+  .modal-btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .modal-btn { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: 'Microsoft YaHei', Arial, sans-serif; }
+
+  /* 手动添加规则表单 */
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-group { flex: 1; min-width: 120px; }
+  .form-group label { font-size: 12px; color: #555; margin-bottom: 3px; display: block; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 7px 10px; border: 1px solid #ddd;
+    border-radius: 5px; font-size: 13px;
+  }
+
+  /* 进度条 */
+  .progress { height: 4px; background: #E3F2FD; margin: 0; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, #1976D2, #42A5F5); width: 0; transition: width 0.5s; }
+
+  /* 统计卡片 */
+  .stats-row { display: flex; gap: 10px; padding: 10px 15px; }
+  .stat-card { flex: 1; background: white; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-top: 3px solid #1976D2; }
+  .stat-card.green { border-top-color: #388E3C; }
+  .stat-card.orange { border-top-color: #F57C00; }
+  .stat-num { font-size: 24px; font-weight: bold; color: #1565C0; }
+  .stat-card.green .stat-num { color: #2E7D32; }
+  .stat-card.orange .stat-num { color: #E65100; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 3px; }
+
+  /* 空状态 */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #bbb; }
+  .empty-state .icon { font-size: 60px; margin-bottom: 15px; }
+  .empty-state p { font-size: 14px; }
+
+  /* 编辑输入框 */
+  .editable-cell { cursor: pointer; }
+  .editable-cell:hover { background: #FFF9C4 !important; }
+  input.cell-input { width: 80px; padding: 2px 5px; border: 2px solid #1976D2; border-radius: 3px; text-align: center; font-size: 12px; }
+
+  /* 预览表格特殊 */
+  .preview-table th { background: #37474F; }
+  .preview-table td { font-size: 11px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 滚动条美化 */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; }
+  ::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #888; }
+
+  .hint { font-size: 11px; color: #999; margin-top: 4px; }
+
+  /* 导出选项 */
+  .export-option { border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+  .export-option:hover, .export-option.selected { border-color: #1976D2; background: #E3F2FD; }
+  .export-option h3 { font-size: 14px; color: #1565C0; margin-bottom: 5px; }
+  .export-option p { font-size: 12px; color: #666; }
+</style>
+</head>
+<body>
+
+<!-- 顶部标题 -->
+<div class="header">
+  <div style="font-size:28px">📏</div>
+  <div>
+    <h1>尺寸报告自动填写工具</h1>
+    <p>导入Excel → 自动识别公差 → 一键生成合格数据 → 导出报告</p>
+  </div>
+</div>
+
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+<div class="container">
+
+  <!-- ========== 左侧控制面板 ========== -->
+  <div class="left-panel">
+
+    <!-- 文件操作 -->
+    <div class="section">
+      <div class="section-title">📁 文件操作</div>
+      <button class="btn btn-blue" onclick="document.getElementById('fileInput').click()">
+        📂 导入尺寸报告
+      </button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFile(event)">
+      <div class="file-info" id="fileInfo">未导入文件</div>
+    </div>
+
+    <!-- 设置 -->
+    <div class="section">
+      <div class="section-title">⚙️ 生成设置</div>
+
+      <label>产品数量（件）</label>
+      <div class="radio-group" id="numRadios">
+        <label><input type="radio" name="numP" value="1" onchange="setNum(1)"> <span>1</span></label>
+        <label><input type="radio" name="numP" value="2" onchange="setNum(2)"> <span>2</span></label>
+        <label><input type="radio" name="numP" value="3" onchange="setNum(3)" checked> <span>3</span></label>
+        <label><input type="radio" name="numP" value="4" onchange="setNum(4)"> <span>4</span></label>
+        <label><input type="radio" name="numP" value="5" onchange="setNum(5)"> <span>5</span></label>
+        <label><input type="radio" name="numP" value="6" onchange="setNum(6)"> <span>6</span></label>
+      </div>
+
+      <label>生成策略</label>
+      <select id="strategy">
+        <option value="random_safe">🎲 随机合格值（推荐）</option>
+        <option value="middle">🎯 中值（最保险）</option>
+        <option value="near_upper">⬆️ 接近上限</option>
+        <option value="near_lower">⬇️ 接近下限</option>
+        <option value="normal">📊 正态分布</option>
+      </select>
+
+      <label>小数位数</label>
+      <div class="radio-group">
+        <label><input type="radio" name="dec" value="1" onchange="setDec(1)"> <span>1位</span></label>
+        <label><input type="radio" name="dec" value="2" onchange="setDec(2)" checked> <span>2位</span></label>
+        <label><input type="radio" name="dec" value="3" onchange="setDec(3)"> <span>3位</span></label>
+        <label><input type="radio" name="dec" value="4" onchange="setDec(4)"> <span>4位</span></label>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="section">
+      <div class="section-title">🔧 操作</div>
+      <button class="btn btn-orange" onclick="analyzeTolerance()">🔍 分析公差规则</button>
+      <button class="btn btn-green" onclick="generateData()">✨ 一键生成合格数据</button>
+      <button class="btn btn-blue" onclick="showExportModal()">💾 导出报告</button>
+      <button class="btn" style="background:#9C27B0;color:white" onclick="showAddRuleModal()">➕ 手动添加规则</button>
+      <button class="btn btn-gray" onclick="clearAll()">🗑️ 清空重置</button>
+    </div>
+
+    <!-- 日志 -->
+    <div class="section">
+      <div class="section-title">📋 运行日志</div>
+      <div class="log-box" id="logBox">
+        <div style="color:#888">&gt; 系统就绪，请导入文件...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========== 右侧内容区 ========== -->
+  <div class="right-panel">
+
+    <!-- Tab栏 -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('rules')">📋 公差规则</div>
+      <div class="tab" onclick="switchTab('data')">📊 生成数据</div>
+      <div class="tab" onclick="switchTab('preview')">👁️ 文件预览</div>
+      <div class="tab" onclick="switchTab('edit')">✏️ 手动编辑</div>
+    </div>
+
+    <!-- Tab1: 公差规则 -->
+    <div class="tab-content active" id="tab-rules">
+      <div class="tab-info info-blue" id="rulesInfo">
+        💡 点击左侧「分析公差规则」按钮，系统将自动识别Excel中所有公差要求
+      </div>
+      <div id="rulesEmpty" class="empty-state">
+        <div class="icon">📐</div>
+        <p>暂无公差规则，请先导入文件并分析</p>
+      </div>
+      <div class="table-container" id="rulesTableContainer" style="display:none">
+        <table id="rulesTable">
+          <thead>
+            <tr>
+              <th>序号</th>
+              <th>尺寸项目</th>
+              <th>公称值</th>
+              <th>上偏差</th>
+              <th>下偏差</th>
+              <th>上限值</th>
+              <th>下限值</th>
+              <th>单位</th>
+              <th>识别方式</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="rulesTbody"></tbody>
+        </table>
+      </div>
+      <div id="rulesStat" style="padding:8px 15px;font-size:12px;color:#888;background:white;border-top:1px solid #eee"></div>
+    </div>
+
+    <!-- Tab2: 生成数据 -->
+    <div class="tab-content" id="tab-data">
+      <div class="stats-row" id="statsRow" style="display:none">
+        <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">总项目数</div></div>
+        <div class="stat-card green"><div class="stat-num" id="statPass">0</div><div class="stat-label">合格项</div></div>
+        <div class="stat-card orange"><div class="stat-num" id="statRate">-</div><div class="stat-label">合格率</div></div>
+      </div>
+      <div class="tab-info info-green" id="dataInfo">
+        💡 点击「一键生成合格数据」后，这里显示生成结果
+      </div>
+      <div id="dataEmpty" class="empty-state">
+        <div class="icon">📊</div>
+        <p>暂无数据，请先分析公差规则并生成数据</p>
+      </div>
+      <div class="table-container" id="dataTableContainer" style="display:none">
+        <table id="dataTable">
+          <thead><tr id="dataTableHead"></tr></thead>
+          <tbody id="dataTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab3: 文件预览 -->
+    <div class="tab-content" id="tab-preview">
+      <div class="tab-info info-orange">
+        👁️ 原始文件内容预览（仅供查看）
+        <span id="sheetSelector" style="margin-left:15px"></span>
+      </div>
+      <div id="previewEmpty" class="empty-state">
+        <div class="icon">📄</div>
+        <p>请先导入文件</p>
+      </div>
+      <div class="table-container" id="previewTableContainer" style="display:none">
+        <table id="previewTable" class="preview-table">
+          <thead><tr id="previewHead"></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab4: 手动编辑 -->
+    <div class="tab-content" id="tab-edit">
+      <div class="tab-info" style="background:#F3E5F5;color:#6A1B9A;margin:10px 15px 5px;border-radius:6px;padding:10px 15px;font-size:12px">
+        ✏️ 双击数值单元格可直接编辑，修改后按回车确认
+      </div>
+      <div id="editEmpty" class="empty-state">
+        <div class="icon">✏️</div>
+        <p>请先生成数据</p>
+      </div>
+      <div class="table-container" id="editTableContainer" style="display:none">
+        <table id="editTable">
+          <thead><tr id="editTableHead"></tr></thead>
+          <tbody id="editTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== 手动添加规则弹窗 ========== -->
+<div class="modal" id="addRuleModal">
+  <div class="modal-box">
+    <div class="modal-title">➕ 手动添加公差规则</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>尺寸项目名称 *</label>
+        <input type="text" id="add_name" placeholder="例：孔径A、外径1、长度">
+      </div>
+      <div class="form-group">
+        <label>单位</label>
+        <select id="add_unit">
+          <option value="mm">mm</option>
+          <option value="°">°(角度)</option>
+          <option value="μm">μm</option>
+          <option value="N">N(力)</option>
+          <option value="%">%</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>公称值 *</label>
+        <input type="number" id="add_nominal" placeholder="30" step="any">
+      </div>
+      <div class="form-group">
+        <label>上偏差（正数）</label>
+        <input type="number" id="add_upper_tol" placeholder="0.05" step="any">
+      </div>
+      <div class="form-group">
+        <label>下偏差（负数）</label>
+        <input type="number" id="add_lower_tol" placeholder="-0.05" step="any">
+      </div>
+    </div>
+    <div style="background:#F5F5F5;padding:10px;border-radius:6px;font-size:12px;color:#666">
+      <b>💡 也可以直接填上下限：</b>
+      <div class="form-row" style="margin-top:8px;margin-bottom:0">
+        <div class="form-group">
+          <label>上限值</label>
+          <input type="number" id="add_upper_limit" placeholder="30.05" step="any" oninput="calcFromLimits()">
+        </div>
+        <div class="form-group">
+          <label>下限值</label>
+          <input type="number" id="add_lower_limit" placeholder="29.95" step="any" oninput="calcFromLimits()">
+        </div>
+      </div>
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn btn-gray btn" onclick="closeModal('addRuleModal')">取消</button>
+      <button class="modal-btn btn-green btn" onclick="addRuleManual()">✓ 添加规则</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 导出弹窗 ========== -->
+<div class="modal" id="exportModal">
+  <div class="modal-box">
+    <div class="modal-title">💾 导出报告</div>
+
+    <div class="export-option selected" id="exp1" onclick="selectExport('xlsx')">
+      <h3>📊 导出Excel报告（推荐）</h3>
+      <p>生成格式完整的Excel文件，含合格判定、颜色标注、统计信息</p>
+    </div>
+    <div class="export-option" id="exp2" onclick="selectExport('csv')">
+      <h3>📄 导出CSV文件</h3>
+      <p>纯数据格式，可用Excel/记事本打开，文件小</p>
+    </div>
+    <div class="export-option" id="exp3" onclick="selectExport('json')">
+      <h3>🔧 导出JSON数据</h3>
+      <p>结构化数据格式，包含完整公差规则和生成数据</p>
+    </div>
+
+    <div style="margin-top:10px;padding:10px;background:#FFF9C4;border-radius:6px;font-size:12px;color:#666">
+      ⚠️ 注意：网页版无法直接写入原始Excel模板，需手动将数据复制到原报告中，或使用Excel导出版本。
+    </div>
+
+    <div class="modal-btn-row">
+      <button class="modal-btn btn-gray btn" onclick="closeModal('exportModal')">取消</button>
+      <button class="modal-btn btn-green btn" onclick="doExport()">⬇️ 立即下载</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 删除确认弹窗 ========== -->
+<div class="modal" id="confirmModal">
+  <div class="modal-box" style="min-width:300px">
+    <div class="modal-title">⚠️ 确认操作</div>
+    <p id="confirmText" style="font-size:14px;color:#555;margin-bottom:15px"></p>
+    <div class="modal-btn-row">
+      <button class="modal-btn btn-gray btn" onclick="closeModal('confirmModal')">取消</button>
+      <button class="modal-btn btn-red btn" id="confirmOkBtn">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 引入SheetJS ========== -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+<script>
+// ============================================================
+// 全局数据
+// ============================================================
+let toleranceRules = [];   // 公差规则
+let generatedData = {};    // 生成的数据
+let rawSheetData = [];     // 原始表格数据
+let allSheets = {};        // 所有sheet数据
+let numProducts = 3;
+let decimalPlaces = 2;
+let currentExportType = 'xlsx';
+let ruleIdCounter = 1;
+
+// ============================================================
+// 日志
+// ============================================================
+function log(msg, level = 'info') {
+  const box = document.getElementById('logBox');
+  const colors = { info: '#4CAF50', warn: '#FF9800', error: '#F44336', success: '#69F0AE' };
+  const icons = { info: '>', warn: '⚠', error: '✗', success: '✓' };
+  const time = new Date().toLocaleTimeString();
+  box.innerHTML += `<div style="color:${colors[level]}">[${time}] ${icons[level]} ${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  if (pct >= 100) setTimeout(() => document.getElementById('progressBar').style.width = '0', 1000);
+}
+
+// ============================================================
+// Tab切换
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['rules','data','preview','edit'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ============================================================
+// 设置
+// ============================================================
+function setNum(n) { numProducts = n; log(`产品数量设为 ${n} 件`); }
+function setDec(d) { decimalPlaces = d; log(`小数位数设为 ${d} 位`); }
+
+// ============================================================
+// 导入文件
+// ============================================================
+function importFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  log(`开始读取文件: ${file.name}`);
+  setProgress(20);
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      setProgress(50);
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+
+      allSheets = {};
+      workbook.SheetNames.forEach(name => {
+        allSheets[name] = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: '' });
+      });
+
+      // 默认用第一个sheet
+      rawSheetData = allSheets[workbook.SheetNames[0]];
+
+      // 更新文件信息
+      const sizeKB = (file.size / 1024).toFixed(1);
+      document.getElementById('fileInfo').innerHTML =
+        `📄 ${file.name}<br>大小: ${sizeKB} KB<br>` +
+        `行数: ${rawSheetData.length} | Sheet数: ${workbook.SheetNames.length}`;
+      document.getElementById('fileInfo').style.color = '#2E7D32';
+
+      // 生成sheet切换器
+      let sheetHtml = 'Sheet: ';
+      workbook.SheetNames.forEach(name => {
+        sheetHtml += `<button onclick="switchSheet('${name}')" style="margin:0 3px;padding:3px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:11px">${name}</button>`;
+      });
+      document.getElementById('sheetSelector').innerHTML = sheetHtml;
+
+      setProgress(80);
+      renderPreview(rawSheetData);
+      setProgress(100);
+
+      log(`文件导入成功！${rawSheetData.length} 行数据，${workbook.SheetNames.length} 个Sheet`, 'success');
+      switchTab('preview');
+
+    } catch(err) {
+      log(`文件读取失败: ${err.message}`, 'error');
+      alert('文件读取失败，请确认文件格式正确\n\n错误: ' + err.message);
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function switchSheet(name) {
+  rawSheetData = allSheets[name];
+  renderPreview(rawSheetData);
+  log(`切换到Sheet: ${name}`);
+}
+
+// ============================================================
+// 文件预览
+// ============================================================
+function renderPreview(data) {
+  if (!data || data.length === 0) return;
+
+  const maxCols = Math.min(Math.max(...data.map(r => r.length)), 20);
+  const maxRows = Math.min(data.length, 200);
+
+  // 表头
+  let headHtml = '<th style="background:#37474F;color:white;padding:8px">行</th>';
+  for (let c = 0; c < maxCols; c++) {
+    headHtml += `<th style="background:#37474F;color:white;padding:8px 10px">列${c+1}</th>`;
+  }
+  document.getElementById('previewHead').innerHTML = headHtml;
+
+  // 数据
+  let bodyHtml = '';
+  for (let r = 0; r < maxRows; r++) {
+    bodyHtml += `<tr><td style="color:#999;background:#fafafa;font-size:11px">${r+1}</td>`;
+    for (let c = 0; c < maxCols; c++) {
+      const val = data[r] && data[r][c] !== undefined ? String(data[r][c]) : '';
+      const display = val.length > 20 ? val.substring(0, 20) + '…' : val;
+      bodyHtml += `<td title="${val}">${display}</td>`;
+    }
+    bodyHtml += '</tr>';
+  }
+  document.getElementById('previewBody').innerHTML = bodyHtml;
+
+  document.getElementById('previewEmpty').style.display = 'none';
+  document.getElementById('previewTableContainer').style.display = 'block';
+}
+
+// ============================================================
+// 分析公差规则 - 核心算法
+// ============================================================
+function analyzeTolerance() {
+  if (!rawSheetData || rawSheetData.length === 0) {
+    alert('请先导入文件！');
+    return;
+  }
+
+  log('开始分析公差规则...', 'info');
+  setProgress(10);
+  toleranceRules = [];
+
+  const data = rawSheetData;
+
+  // ===== 正则模式定义 =====
+  const patterns = {
+    // ±0.05 或 ±0.05mm
+    plusMinus: /(\d+\.?\d*)\s*[±＋]\s*(\d+\.?\d*)/,
+    // +0.02/-0.01 或 +0.02-0.01
+    bilateral: /(\d+\.?\d*)\s*\+\s*(\d+\.?\d*)\s*[\/\-－]\s*(\d+\.?\d*)/,
+    // 29.95~30.05 或 29.95-30.05（范围）
+    range: /(\d+\.?\d+)\s*[~～]\s*(\d+\.?\d+)/,
+    // 29.95 - 30.05（带空格的范围，数值需有小数）
+    rangeHyphen: /(\d+\.\d+)\s*-\s*(\d+\.\d+)/,
+    // MAX 50 或 ≤50
+    maxOnly: /(?:MAX|max|最大值?|≤|<=)\s*(\d+\.?\d*)/i,
+    // MIN 10 或 ≥10
+    minOnly: /(?:MIN|min|最小值?|≥|>=)\s*(\d+\.?\d*)/i,
+    // 纯数字（用于偏差列）
+    pureNum: /^[+\-±]?\s*\d+\.?\d*$/,
+    // 带φ的尺寸
+    phiDim: /[φΦ⌀Ø]\s*(\d+\.?\d*)/,
+  };
+
+  // ===== 第一步：识别表头，找关键列 =====
+  let headerRow = -1;
+  let cols = { item: -1, nominal: -1, upper: -1, lower: -1, upperLimit: -1, lowerLimit: -1 };
+
+  const headerKeywords = {
+    item:       ['项目', '名称', 'item', 'characteristic', '特征', '检验项', '尺寸名', '测量项'],
+    nominal:    ['公称', 'nominal', '基本尺寸', '名义', '理论值', 'basic', '标准值', '设计值'],
+    upper:      ['上偏差', 'upper tol', '+tol', '正偏差', '上公差', '+'],
+    lower:      ['下偏差', 'lower tol', '-tol', '负偏差', '下公差', '-'],
+    upperLimit: ['上限', 'upper limit', 'max', '最大', 'usl', '规格上限'],
+    lowerLimit: ['下限', 'lower limit', 'min', '最小', 'lsl', '规格下限'],
+  };
+
+  for (let r = 0; r < Math.min(15, data.length); r++) {
+    const row = data[r];
+    let matchCount = 0;
+    const tempCols = { item: -1, nominal: -1, upper: -1, lower: -1, upperLimit: -1, lowerLimit: -1 };
+
+    for (let c = 0; c < row.length; c++) {
+      const cell = String(row[c]).toLowerCase().trim();
+      if (!cell) continue;
+
+      for (const [key, keywords] of Object.entries(headerKeywords)) {
+        if (keywords.some(k => cell.includes(k.toLowerCase()))) {
+          if (tempCols[key] === -1) { tempCols[key] = c; matchCount++; }
+        }
+      }
+    }
+
+    if (matchCount >= 2) {
+      headerRow = r;
+      cols = tempCols;
+      log(`找到表头行: 第${r+1}行，匹配${matchCount}个关键列`, 'success');
+      break;
+    }
+  }
+
+  setProgress(30);
+
+  // ===== 第二步：逐行扫描 =====
+  let ruleId = 1;
+  const startRow = headerRow >= 0 ? headerRow + 1 : 0;
+
+  for (let r = startRow; r < data.length; r++) {
+    const row = data[r];
+    if (!row || row.length === 0) continue;
+
+    const rowStr = row.map(c => String(c === null || c === undefined ? '' : c));
+    const nonEmpty = rowStr.filter(v => v.trim() !== '');
+    if (nonEmpty.length < 2) continue;
+
+    let rule = null;
+
+    // --- 方法A: 结构化列方式 ---
+    if (headerRow >= 0) {
+      rule = tryStructuredExtract(rowStr, cols, r, ruleId, patterns);
+    }
+
+    // --- 方法B: 单元格内联公差 ---
+    if (!rule) {
+      rule = tryCellPatternExtract(rowStr, r, ruleId, patterns);
+    }
+
+    if (rule) {
+      toleranceRules.push(rule);
+      ruleId++;
+    }
+  }
+
+  setProgress(70);
+
+  // ===== 第三步：去重和排序 =====
+  toleranceRules = deduplicateRules(toleranceRules);
+
+  setProgress(100);
+
+  renderRulesTable();
+  switchTab('rules');
+
+  if (toleranceRules.length > 0) {
+    log(`✓ 分析完成！识别到 ${toleranceRules.length} 条公差规则`, 'success');
+    document.getElementById('rulesInfo').innerHTML =
+      `✅ 成功识别 <strong>${toleranceRules.length}</strong> 条公差规则。请检查下表是否正确，可手动删除/添加。`;
+  } else {
+    log('未识别到公差规则，建议手动添加', 'warn');
+    document.getElementById('rulesInfo').innerHTML =
+      `⚠️ 未能自动识别公差规则。请点击「手动添加规则」按钮逐条录入，或检查文件格式是否标准。`;
+    alert('未能自动识别到公差规则。\n\n常见原因：\n1. 公差符号使用了特殊格式\n2. 数据分散在多行\n3. 文件为图片型Excel\n\n请使用「手动添加规则」功能录入数据。');
+  }
+}
+
+// 结构化提取
+function tryStructuredExtract(rowStr, cols, rowIdx, ruleId, patterns) {
+  try {
+    const nominalStr = cols.nominal >= 0 ? rowStr[cols.nominal] : '';
+    const upperStr   = cols.upper >= 0   ? rowStr[cols.upper]   : '';
+    const lowerStr   = cols.lower >= 0   ? rowStr[cols.lower]   : '';
+    const upperLimStr = cols.upperLimit >= 0 ? rowStr[cols.upperLimit] : '';
+    const lowerLimStr = cols.lowerLimit >= 0 ? rowStr[cols.lowerLimit] : '';
+    const itemStr    = cols.item >= 0    ? rowStr[cols.item]    : `项目_${rowIdx+1}`;
+
+    // 提取公称值
+    let nominal = parseFloat(nominalStr.replace(/[φΦ⌀Ø°]/g, ''));
+    if (isNaN(nominal) && nominalStr) {
+      const m = nominalStr.match(/(\d+\.?\d*)/);
+      if (m) nominal = parseFloat(m[1]);
+    }
+    if (isNaN(nominal)) return null;
+
+    let upperTol = 0, lowerTol = 0, upperLimit, lowerLimit;
+
+    // 优先用上下限
+    if (upperLimStr && lowerLimStr) {
+      upperLimit = parseFloat(upperLimStr);
+      lowerLimit = parseFloat(lowerLimStr);
+      if (!isNaN(upperLimit) && !isNaN(lowerLimit)) {
+        upperTol = upperLimit - nominal;
+        lowerTol = lowerLimit - nominal;
+        return buildRule(ruleId, itemStr, nominal, upperTol, lowerTol, rowIdx, 'structured');
+      }
+    }
+
+    // 用偏差列
+    if (upperStr !== '') {
+      upperTol = parseFloat(upperStr);
+      if (isNaN(upperTol)) upperTol = 0;
+    }
+    if (lowerStr !== '') {
+      lowerTol = parseFloat(lowerStr);
+      if (isNaN(lowerTol)) lowerTol = 0;
+      if (lowerTol > 0) lowerTol = -lowerTol; // 确保负数
+    }
+
+    if (upperTol === 0 && lowerTol === 0) return null;
+
+    return buildRule(ruleId, itemStr, nominal, upperTol, lowerTol, rowIdx, 'structured');
+  } catch(e) { return null; }
+}
+
+// 单元格正则提取
+function tryCellPatternExtract(rowStr, rowIdx, ruleId, patterns) {
+  for (let c = 0; c < rowStr.length; c++) {
+    const cell = rowStr[c].trim();
+    if (!cell) continue;
+
+    // 先提取φ尺寸
+    let cellClean = cell.replace(/[φΦ⌀Ø]/g, '');
+
+    // ±模式
+    let m = cellClean.match(patterns.plusMinus);
+    if (m) {
+      const nominal = parseFloat(m[1]);
+      const tol = parseFloat(m[2]);
+      if (!isNaN(nominal) && !isNaN(tol) && tol > 0) {
+        const itemName = findItemName(rowStr, c);
+        return buildRule(ruleId, itemName, nominal, tol, -tol, rowIdx, '±模式');
+      }
+    }
+
+    // 双向公差模式
+    m = cellClean.match(patterns.bilateral);
+    if (m) {
+      const nominal = parseFloat(m[1]);
+      const upper = parseFloat(m[2]);
+      const lower = -parseFloat(m[3]);
+      if (!isNaN(nominal) && !isNaN(upper)) {
+        const itemName = findItemName(rowStr, c);
+        return buildRule(ruleId, itemName, nominal, upper, lower, rowIdx, '双向公差');
+      }
+    }
+
+    // 范围模式 ~
+    m = cell.match(patterns.range);
+    if (m) {
+      let lo = parseFloat(m[1]), hi = parseFloat(m[2]);
+      if (!isNaN(lo) && !isNaN(hi)) {
+        if (lo > hi) [lo, hi] = [hi, lo];
+        const nominal = (lo + hi) / 2;
+        const itemName = findItemName(rowStr, c);
+        return buildRule(ruleId, itemName, nominal, hi - nominal, lo - nominal, rowIdx, '范围~');
+      }
+    }
+
+    // 范围模式 - (带小数)
+    m = cell.match(patterns.rangeHyphen);
+    if (m) {
+      let lo = parseFloat(m[1]), hi = parseFloat(m[2]);
+      if (!isNaN(lo) && !isNaN(hi) && lo < hi) {
+        const nominal = (lo + hi) / 2;
+        const itemName = findItemName(rowStr, c);
+        return buildRule(ruleId, itemName, nominal, hi - nominal, lo - nominal, rowIdx, '范围-');
+      }
+    }
+
+    // MAX模式
+    m = cell.match(patterns.maxOnly);
+    if (m) {
+      const maxVal = parseFloat(m[1]);
+      if (!isNaN(maxVal)) {
+        const itemName = findItemName(rowStr, c);
+        return buildRule(ruleId, itemName, maxVal * 0.5, maxVal * 0.5, -maxVal * 0.5, rowIdx, 'MAX');
+      }
+    }
+  }
+  return null;
+}
+
+function buildRule(id, name, nominal, upperTol, lowerTol, rowIdx, source) {
+  // 验证数据合理性
+  if (Math.abs(upperTol) > nominal * 10 || Math.abs(lowerTol) > nominal * 10) return null;
+  if (nominal <= 0 && nominal !== 0) return null;
+
+  return {
+    id: id,
+    itemName: String(name).trim().substring(0, 40) || `项目_${rowIdx+1}`,
+    nominal: nominal,
+    upperTol: upperTol,
+    lowerTol: lowerTol,
+    upperLimit: round(nominal + upperTol, 6),
+    lowerLimit: round(nominal + lowerTol, 6),
+    unit: 'mm',
+    rowIndex: rowIdx + 1,
+    source: source
+  };
+}
+
+function findItemName(rowArr, currentCol) {
+  // 向左找非数字的文本
+  for (let i = currentCol - 1; i >= Math.max(0, currentCol - 4); i--) {
+    const v = String(rowArr[i]).trim();
+    if (v && v !== '' && !/^\d+\.?\d*$/.test(v) && v.length > 1) {
+      return v.substring(0, 35);
+    }
+  }
+  // 向右找
+  for (let i = currentCol + 1; i <= Math.min(rowArr.length - 1, currentCol + 3); i++) {
+    const v = String(rowArr[i]).trim();
+    if (v && !/^\d+\.?\d*$/.test(v) && v.length > 1) {
+      return v.substring(0, 35);
+    }
+  }
+  return `尺寸项_${currentCol + 1}`;
+}
+
+function deduplicateRules(rules) {
+  const seen = new Set();
+  return rules.filter(rule => {
+    const key = `${rule.nominal}_${rule.upperTol}_${rule.lowerTol}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// ============================================================
+// 渲染公差规则表格
+// ============================================================
+function renderRulesTable() {
+  const tbody = document.getElementById('rulesTbody');
+
+  if (toleranceRules.length === 0) {
+    document.getElementById('rulesEmpty').style.display = 'flex';
+    document.getElementById('rulesTableContainer').style.display = 'none';
+    document.getElementById('rulesStat').textContent = '共识别 0 条规则';
+    return;
+  }
+
+  document.getElementById('rulesEmpty').style.display = 'none';
+  document.getElementById('rulesTableContainer').style.display = 'block';
+
+  tbody.innerHTML = toleranceRules.map((rule, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td class="td-name">${rule.itemName}</td>
+      <td>${rule.nominal}</td>
+      <td style="color:#1565C0">+${rule.upperTol}</td>
+      <td style="color:#C62828">${rule.lowerTol}</td>
+      <td style="color:#1B5E20;font-weight:bold">${rule.upperLimit}</td>
+      <td style="color:#B71C1C;font-weight:bold">${rule.lowerLimit}</td>
+      <td>${rule.unit}</td>
+      <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 6px;border-radius:4px;font-size:10px">${rule.source}</span></td>
+      <td>
+        <button onclick="deleteRule(${rule.id})" style="background:#FFEBEE;color:#C62828;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:11px">删除</button>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('rulesStat').innerHTML =
+    `共识别 <strong>${toleranceRules.length}</strong> 条公差规则 | ` +
+    `可点击「删除」移除错误规则，或点击「手动添加规则」补充`;
+}
+
+function deleteRule(id) {
+  toleranceRules = toleranceRules.filter(r => r.id !== id);
+  renderRulesTable();
+  log(`已删除规则 ID:${id}`);
+}
+
+// ============================================================
+// 生成合格数据
+// ============================================================
+function generateData() {
+  if (toleranceRules.length === 0) {
+    alert('请先分析公差规则，或手动添加规则！');
+    return;
+  }
+
+  const strategy = document.getElementById('strategy').value;
+  log(`开始生成数据: ${numProducts}件产品，策略=${strategy}，小数位=${decimalPlaces}`);
+  setProgress(20);
+
+  generatedData = {};
+
+  toleranceRules.forEach(rule => {
+    const key = `rule_${rule.id}`;
+    const lo = rule.lowerLimit;
+    const hi = rule.upperLimit;
+    const range = hi - lo;
+    const values = [];
+
+    for (let p = 0; p < numProducts; p++) {
+      let val;
+      switch(strategy) {
+        case 'middle':
+          val = (hi + lo) / 2 + range * 0.04 * (Math.random() - 0.5);
+          break;
+        case 'random_safe':
+          val = lo + range * (0.1 + Math.random() * 0.8);
+          break;
+        case 'near_upper':
+          val = lo + range * (0.75 + Math.random() * 0.2);
+          break;
+        case 'near_lower':
+          val = lo + range * (0.05 + Math.random() * 0.2);
+          break;
+        case 'normal':
+          // 正态分布，均值在中间，σ=range/6
+          const u1 = Math.random(), u2 = Math.random();
+          const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+          val = (hi + lo) / 2 + z * range / 6;
+          break;
+        default:
+          val = (hi + lo) / 2;
+      }
+      // 夹紧在范围内，留0.5%余量
+      const margin = range * 0.005;
+      val = Math.max(lo + margin, Math.min(hi - margin, val));
+      values.push(round(val, decimalPlaces));
+    }
+
+    generatedData[key] = { rule: rule, values: values };
+  });
+
+  setProgress(80);
+  renderDataTable();
+  renderEditTable();
+  switchTab('data');
+  setProgress(100);
+
+  const total = toleranceRules.length * numProducts;
+  log(`✓ 数据生成完成！${toleranceRules.length}项 × ${numProducts}件 = ${total}个数据`, 'success');
+  alert(`✅ 数据生成完成！\n\n共生成 ${toleranceRules.length} 项 × ${numProducts} 件 = ${total} 个合格数据\n\n请到「生成数据」标签查看结果`);
+}
+
+// ============================================================
+// 渲染生成数据表格
+// ============================================================
+function renderDataTable() {
+  // 表头
+  let headHtml = '<th>序号</th><th>尺寸项目</th><th>公称值</th><th>上限</th><th>下限</th><th>单位</th>';
+  for (let i = 1; i <= numProducts; i++) headHtml += `<th>产品${i}</th>`;
+  headHtml += '<th>合格判定</th>';
+  document.getElementById('dataTableHead').innerHTML = headHtml;
+
+  // 数据
+  let bodyHtml = '';
+  let totalItems = 0, passItems = 0;
+  let idx = 1;
+
+  for (const [key, data] of Object.entries(generatedData)) {
+    const rule = data.rule;
+    const vals = data.values;
+    const allPass = vals.every(v => v >= rule.lowerLimit && v <= rule.upperLimit);
+
+    totalItems += vals.length;
+    passItems += vals.filter(v => v >= rule.lowerLimit && v <= rule.upperLimit).length;
+
+    let rowHtml = `<tr>
+      <td>${idx++}</td>
+      <td class="td-name">${rule.itemName}</td>
+      <td>${rule.nominal}</td>
+      <td style="color:#1B5E20">${rule.upperLimit}</td>
+      <td style="color:#B71C1C">${rule.lowerLimit}</td>
+      <td>${rule.unit}</td>`;
+
+    vals.forEach(v => {
+      const isPass = v >= rule.lowerLimit && v <= rule.upperLimit;
+      rowHtml += `<td class="${isPass ? 'cell-pass' : 'cell-fail'}">${v}</td>`;
+    });
+
+    rowHtml += `<td><span class="${allPass ? 'badge-pass' : 'badge-fail'}">${allPass ? '✅ 合格' : '❌ 超差'}</span></td></tr>`;
+    bodyHtml += rowHtml;
+  }
+
+  document.getElementById('dataTableBody').innerHTML = bodyHtml;
+  document.getElementById('dataEmpty').style.display = 'none';
+  document.getElementById('dataTableContainer').style.display = 'block';
+  document.getElementById('statsRow').style.display = 'flex';
+
+  // 统计
+  document.getElementById('statTotal').textContent = Object.keys(generatedData).length;
+  document.getElementById('statPass').textContent = Object.values(generatedData).filter(d =>
+    d.values.every(v => v >= d.rule.lowerLimit && v <= d.rule.upperLimit)).length;
+  document.getElementById('statRate').textContent =
+    totalItems > 0 ? (passItems / totalItems * 100).toFixed(1) + '%' : '-';
+}
+
+// ============================================================
+// 渲染手动编辑表格
+// ============================================================
+function renderEditTable() {
+  let headHtml = '<th>序号</th><th>尺寸项目</th><th>上限</th><th>下限</th>';
+  for (let i = 1; i <= numProducts; i++) headHtml += `<th>产品${i}</th>`;
+  headHtml += '<th>状态</th>';
+  document.getElementById('editTableHead').innerHTML = headHtml;
+
+  let bodyHtml = '';
+  let idx = 1;
+
+  for (const [key, data] of Object.entries(generatedData)) {
+    const rule = data.rule;
+    const vals = data.values;
+
+    let rowHtml = `<tr data-key="${key}">
+      <td>${idx++}</td>
+      <td class="td-name">${rule.itemName}</td>
+      <td style="color:#1B5E20">${rule.upperLimit}</td>
+      <td style="color:#B71C1C">${rule.lowerLimit}</td>`;
+
+    for (let p = 0; p < numProducts; p++) {
+      const v = vals[p] !== undefined ? vals[p] : '';
+      const isPass = v !== '' && v >= rule.lowerLimit && v <= rule.upperLimit;
+      rowHtml += `<td class="editable-cell ${isPass ? 'cell-pass' : ''}"
+        ondblclick="startEdit(this, '${key}', ${p})"
+        data-key="${key}" data-pidx="${p}">${v}</td>`;
+    }
+
+    const allPass = vals.every(v => v >= rule.lowerLimit && v <= rule.upperLimit);
+    rowHtml += `<td><span class="${allPass ? 'badge-pass' : 'badge-fail'}">${allPass ? '✅' : '❌'}</span></td></tr>`;
+    bodyHtml += rowHtml;
+  }
+
+  document.getElementById('editTableBody').innerHTML = bodyHtml;
+  document.getElementById('editEmpty').style.display = 'none';
+  document.getElementById('editTableContainer').style.display = 'block';
+}
+
+// 内联编辑
+function startEdit(cell, key, pIdx) {
+  const currentVal = cell.textContent;
+  const rule = generatedData[key].rule;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'cell-input';
+  input.value = currentVal;
+  input.step = Math.pow(10, -decimalPlaces);
+
+  cell.textContent = '';
+  cell.appendChild(input);
+  input.focus();
+  input.select();
+
+  function finishEdit() {
+    const newVal = parseFloat(input.value);
+    if (!isNaN(newVal)) {
+      const rounded = round(newVal, decimalPlaces);
+      generatedData[key].values[pIdx] = rounded;
+      const isPass = rounded >= rule.lowerLimit && rounded <= rule.upperLimit;
+      cell.textContent = rounded;
+      cell.className = `editable-cell ${isPass ? 'cell-pass' : 'cell-fail'}`;
+      if (!isPass) log(`⚠ ${rule.itemName} 产品${pIdx+1} 值 ${rounded} 超差！[${rule.lowerLimit}, ${rule.upperLimit}]`, 'warn');
+    } else {
+      cell.textContent = currentVal;
+    }
+  }
+
+  input.addEventListener('blur', finishEdit);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { input.blur(); } if (e.key === 'Escape') { cell.textContent = currentVal; } });
+}
+
+// ============================================================
+// 手动添加规则
+// ============================================================
+function showAddRuleModal() {
+  ['add_name','add_nominal','add_upper_tol','add_lower_tol','add_upper_limit','add_lower_limit']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('addRuleModal').classList.add('show');
+}
+
+function calcFromLimits() {
+  const hi = parseFloat(document.getElementById('add_upper_limit').value);
+  const lo = parseFloat(document.getElementById('add_lower_limit').value);
+  if (!isNaN(hi) && !isNaN(lo)) {
+    const nominal = (hi + lo) / 2;
+    document.getElementById('add_nominal').value = round(nominal, 4);
+    document.getElementById('add_upper_tol').value = round(hi - nominal, 4);
+    document.getElementById('add_lower_tol').value = round(lo - nominal, 4);
+  }
+}
+
+function addRuleManual() {
+  const name = document.getElementById('add_name').value.trim();
+  const nominal = parseFloat(document.getElementById('add_nominal').value);
+  let upperTol = parseFloat(document.getElementById('add_upper_tol').value);
+  let lowerTol = parseFloat(document.getElementById('add_lower_tol').value);
+  const unit = document.getElementById('add_unit').value;
+
+  // 也支持直接填上下限
+  const hiStr = document.getElementById('add_upper_limit').value;
+  const loStr = document.getElementById('add_lower_limit').value;
+
+  if (!name) { alert('请填写尺寸项目名称！'); return; }
+  if (isNaN(nominal)) { alert('请填写公称值！'); return; }
+
+  if (!isNaN(parseFloat(hiStr)) && !isNaN(parseFloat(loStr))) {
+    upperTol = parseFloat(hiStr) - nominal;
+    lowerTol = parseFloat(loStr) - nominal;
+  }
+
+  if (isNaN(upperTol) || isNaN(lowerTol)) { alert('请填写偏差值或上下限！'); return; }
+  if (lowerTol > 0) lowerTol = -lowerTol;
+
+  ruleIdCounter++;
+  const rule = {
+    id: ruleIdCounter,
+    itemName: name,
+    nominal: nominal,
+    upperTol: upperTol,
+    lowerTol: lowerTol,
+    upperLimit: round(nominal + upperTol, 6),
+    lowerLimit: round(nominal + lowerTol, 6),
+    unit: unit,
+    rowIndex: 0,
+    source: '手动添加'
+  };
+
+  toleranceRules.push(rule);
+  renderRulesTable();
+  closeModal('addRuleModal');
+  switchTab('rules');
+  log(`手动添加规则: ${name} [${rule.lowerLimit}, ${rule.upperLimit}]`, 'success');
+}
+
+// ============================================================
+// 导出
+// ============================================================
+function showExportModal() {
+  if (Object.keys(generatedData).length === 0) {
+    alert('请先生成数据！');
+    return;
+  }
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function selectExport(type) {
+  currentExportType = type;
+  ['exp1','exp2','exp3'].forEach(id => document.getElementById(id).classList.remove('selected'));
+  const map = { xlsx: 'exp1', csv: 'exp2', json: 'exp3' };
+  document.getElementById(map[type]).classList.add('selected');
+}
+
+function doExport() {
+  closeModal('exportModal');
+  if (currentExportType === 'xlsx') exportExcel();
+  else if (currentExportType === 'csv') exportCSV();
+  else exportJSON();
+}
+
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // ===== 主数据Sheet =====
+  const headers = ['序号', '尺寸项目', '公称值', '上限', '下限', '单位'];
+  for (let i = 1; i <= numProducts; i++) headers.push(`产品${i}`);
+  headers.push('合格判定', '备注');
+
+  const rows = [headers];
+  let idx = 1;
+
+  for (const [key, data] of Object.entries(generatedData)) {
+    const rule = data.rule;
+    const vals = data.values;
+    const allPass = vals.every(v => v >= rule.lowerLimit && v <= rule.upperLimit);
+
+    const row = [idx++, rule.itemName, rule.nominal, rule.upperLimit, rule.lowerLimit, rule.unit];
+    for (let p = 0; p < numProducts; p++) row.push(vals[p] !== undefined ? vals[p] : '');
+    row.push(allPass ? '合格' : '不合格', '');
+    rows.push(row);
+  }
+
+  // 添加统计行
+  const total = Object.keys(generatedData).length;
+  const passCount = Object.values(generatedData).filter(d =>
+    d.values.every(v => v >= d.rule.lowerLimit && v <= d.rule.upperLimit)).length;
+  rows.push(['', `合计${total}项`, '', '', '', '', ...Array(numProducts).fill(''),
+    `合格率${(passCount/total*100).toFixed(1)}%`, '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // 设置列宽
+  ws['!cols'] = [
+    {wch:6}, {wch:25}, {wch:10}, {wch:10}, {wch:10}, {wch:6},
+    ...Array(numProducts).fill({wch:10}),
+    {wch:10}, {wch:15}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, '尺寸报告');
+
+  // ===== 公差规则Sheet =====
+  const ruleHeaders = ['序号', '项目名称', '公称值', '上偏差', '下偏差', '上限', '下限', '单位', '识别方式'];
+  const ruleRows = [ruleHeaders, ...toleranceRules.map((r, i) => [
+    i+1, r.itemName, r.nominal, r.upperTol, r.lowerTol, r.upperLimit, r.lowerLimit, r.unit, r.source
+  ])];
+  const ws2 = XLSX.utils.aoa_to_sheet(ruleRows);
+  XLSX.utils.book_append_sheet(wb, ws2, '公差规则');
+
+  // 下载
+  const filename = `尺寸报告_${formatDate()}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  log(`✓ Excel报告已下载: ${filename}`, 'success');
+}
+
+function exportCSV() {
+  const headers = ['项目', '公称值', '上限', '下限', '单位'];
+  for (let i = 1; i <= numProducts; i++) headers.push(`产品${i}`);
+
+  let csv = '\uFEFF' + headers.join(',') + '\n';
+
+  for (const [key, data] of Object.entries(generatedData)) {
+    const rule = data.rule;
+    const row = [rule.itemName, rule.nominal, rule.upperLimit, rule.lowerLimit, rule.unit];
+    for (let p = 0; p < numProducts; p++) row.push(data.values[p] !== undefined ? data.values[p] : '');
+    csv += row.join(',') + '\n';
+  }
+
+  downloadText(csv, `尺寸数据_${formatDate()}.csv`, 'text/csv;charset=utf-8');
+  log('✓ CSV文件已下载', 'success');
+}
+
+function exportJSON() {
+  const output = {
+    exportTime: new Date().toISOString(),
+    numProducts: numProducts,
+    rules: toleranceRules,
+    data: Object.values(generatedData).map(d => ({
+      itemName: d.rule.itemName,
+      nominal: d.rule.nominal,
+      upperLimit: d.rule.upperLimit,
+      lowerLimit: d.rule.lowerLimit,
+      unit: d.rule.unit,
+      values: d.values
+    }))
+  };
+  downloadText(JSON.stringify(output, null, 2), `尺寸数据_${formatDate()}.json`, 'application/json');
+  log('✓ JSON文件已下载', 'success');
+}
+
+function downloadText(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+// ============================================================
+// 工具函数
+// ============================================================
+function round(val, decimals) {
+  return Math.round(val * Math.pow(10, decimals)) / Math.pow(10, decimals);
+}
+
+function formatDate() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function clearAll() {
+  if (!confirm('确定要清空所有数据吗？')) return;
+  toleranceRules = []; generatedData = {}; rawSheetData = []; allSheets = {};
+  document.getElementById('fileInfo').innerHTML = '未导入文件';
+  document.getElementById('fileInfo').style.color = '#666';
+  document.getElementById('rulesTbody').innerHTML = '';
+  document.getElementById('rulesEmpty').style.display = 'flex';
+  document.getElementById('rulesTableContainer').style.display = 'none';
+  document.getElementById('dataEmpty').style.display = 'flex';
+  document.getElementById('dataTableContainer').style.display = 'none';
+  document.getElementById('previewEmpty').style.display = 'flex';
+  document.getElementById('previewTableContainer').style.display = 'none';
+  document.getElementById('editEmpty').style.display = 'flex';
+  document.getElementById('editTableContainer').style.display = 'none';
+  document.getElementById('statsRow').style.display = 'none';
+  document.getElementById('logBox').innerHTML = '<div style="color:#888">> 已清空，系统就绪...</div>';
+  log('已清空所有数据');
+}
+
+// 点击弹窗背景关闭
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+</script>
+</body>
+</html>
