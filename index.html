@@ -345,6 +345,11 @@ input[type=number]{font-family:var(--mono);}
 .btn-spinning{animation:spin-btn .5s linear;}
 @media print{.no-print{display:none!important;}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+const SUPABASE_URL = "https://vjdrmsxkcwpsssqltrb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_cbzDmkbLelERD8pZepXzQw_9W_nRDep";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
 </head>
 <body>
 <div class="app">
@@ -3022,5 +3027,57 @@ function init(seed=true){
 const hasSave=tryLoadSave();
 init(!hasSave);
 </script>
+
+<script>
+// ===== 覆盖为云端版本 =====
+async function saveData(){
+  try{
+    const payload={
+      workers:S.workers,products:S.products,demands:S.demands,
+      procDone:S.procDone,recruits:S.recruits,shift:S.shift,
+      actualDone:S.actualDone,log:S.log,
+      cdDemands:S.cdDemands,cdHistory:S.cdHistory,dayConfirm:S.dayConfirm,
+      locks:S.locks,
+      customers:S.customers,moldCustomer:S.moldCustomer,
+      savedAt:new Date().toISOString()
+    };
+
+    const { error } = await supabaseClient
+      .from('qc_data')
+      .upsert([{ id:1, content:payload }]);
+
+    if(error) throw error;
+
+    S.savedAt=new Date();
+    document.getElementById('save-label') && (document.getElementById('save-label').textContent='已保存（云端）');
+
+    alert('☁️ 已保存到云端');
+  }catch(e){
+    alert('❌ 保存失败：'+e.message);
+  }
+}
+
+async function tryLoadSave(){
+  try{
+    const { data,error } = await supabaseClient
+      .from('qc_data')
+      .select('*')
+      .eq('id',1)
+      .single();
+
+    if(error && error.code!=='PGRST116') throw error;
+
+    if(data && data.content){
+      Object.assign(S,data.content);
+      return true;
+    }
+    return false;
+  }catch(e){
+    console.error(e);
+    return false;
+  }
+}
+</script>
+
 </body>
 </html>
