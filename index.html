@@ -344,7 +344,7 @@ input:focus,select:focus{border-color:#1976d2;background:#fff}
 
 <script>
 // ===== 腾讯云 CloudBase 初始化 =====
-const ENV_ID = "bad-defect-stat-4g1gfqhm724365c6";
+const ENV_ID = 'bad-defect-stat-4g1gfqhm724365c6';
 let cloudDb = null;
 let cloudInited = false;
 let cloudSyncing = false;
@@ -1916,6 +1916,39 @@ function exportCompareExcel() {
 
 window.onload = function() { initEntry(); initCloud(); };
 </script>
+
+  <!-- Add a div to display fetched data -->
+  <div id="dataDisplay">加载中...</div>
+
+  <!-- Supabase integration script -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Supabase client initialization
+    const supabaseClient = supabase.createClient(
+      'https://xzvyorlfozulecmdksps.supabase.co',  // Replace with your Supabase URL
+      'sb_publishable_Ux_VJ8wmEegvQPS0hE2YvA_Kd2BENKw'  // Replace with your API Key
+    );
+
+    // Function to fetch data from Supabase and display it in the div
+    async function getData() {
+      const { data, error } = await supabase
+        .from('records')  // Replace with your table name
+        .select('*');     // Query all fields
+
+      if (error) {
+        console.error("Error fetching data:", error);
+        return;
+      }
+
+      // Insert the fetched data into the dataDisplay div
+      document.getElementById("dataDisplay").innerText = data[0]?.content || '没有数据';
+    }
+
+    // Execute the getData function when the page loads
+    window.onload = getData;
+  </script>
+
 </body>
+
 </html>
 PLACEHOLDER_MARKER
